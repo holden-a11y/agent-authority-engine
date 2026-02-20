@@ -8,6 +8,7 @@ import { Settings, FileText, Link2, CheckSquare, LayoutDashboard, Plus, X } from
 
 interface EntityConfig {
   agentName: string;
+  teamName: string;
   market: string;
   brokerage: string;
   niche1: string;
@@ -22,6 +23,7 @@ interface EntityConfig {
 
 const defaultConfig: EntityConfig = {
   agentName: "Holden Richardson",
+  teamName: "",
   market: "Grand Rapids, Michigan",
   brokerage: "",
   niche1: "Relocation to Grand Rapids",
@@ -141,6 +143,10 @@ const Admin = () => {
                       <div>
                         <label className="text-sm font-medium mb-1.5 block">Brokerage</label>
                         <Input value={config.brokerage} onChange={(e) => update("brokerage", e.target.value)} placeholder="e.g. Keller Williams" className="h-9" />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-1.5 block">Team Name</label>
+                        <Input value={config.teamName} onChange={(e) => update("teamName", e.target.value)} placeholder="e.g. The Richardson Group" className="h-9" />
                       </div>
                       <div>
                         <label className="text-sm font-medium mb-1.5 block">Follow Up Boss Webhook URL</label>
