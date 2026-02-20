@@ -19,6 +19,11 @@ interface EntityConfig {
   agentBio: string;
   voiceToneNotes: string;
   fubWebhookUrl: string;
+  googleBusinessProfile: string;
+  facebookUrl: string;
+  instagramUrl: string;
+  linkedinUrl: string;
+  youtubeUrl: string;
 }
 
 const defaultConfig: EntityConfig = {
@@ -34,6 +39,11 @@ const defaultConfig: EntityConfig = {
   agentBio: "",
   voiceToneNotes: "",
   fubWebhookUrl: "",
+  googleBusinessProfile: "",
+  facebookUrl: "",
+  instagramUrl: "",
+  linkedinUrl: "",
+  youtubeUrl: "",
 };
 
 const pageCategories = [
@@ -151,6 +161,28 @@ const Admin = () => {
                       <div>
                         <label className="text-sm font-medium mb-1.5 block">Follow Up Boss Webhook URL</label>
                         <Input value={config.fubWebhookUrl} onChange={(e) => update("fubWebhookUrl", e.target.value)} placeholder="https://..." className="h-9" />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-1.5 block">Google Business Profile URL</label>
+                        <Input value={config.googleBusinessProfile} onChange={(e) => update("googleBusinessProfile", e.target.value)} placeholder="https://g.page/..." className="h-9" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                      <div>
+                        <label className="text-sm font-medium mb-1.5 block">Facebook URL</label>
+                        <Input value={config.facebookUrl} onChange={(e) => update("facebookUrl", e.target.value)} placeholder="https://facebook.com/..." className="h-9" />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-1.5 block">Instagram URL</label>
+                        <Input value={config.instagramUrl} onChange={(e) => update("instagramUrl", e.target.value)} placeholder="https://instagram.com/..." className="h-9" />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-1.5 block">LinkedIn URL</label>
+                        <Input value={config.linkedinUrl} onChange={(e) => update("linkedinUrl", e.target.value)} placeholder="https://linkedin.com/in/..." className="h-9" />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-1.5 block">YouTube URL</label>
+                        <Input value={config.youtubeUrl} onChange={(e) => update("youtubeUrl", e.target.value)} placeholder="https://youtube.com/@..." className="h-9" />
                       </div>
                     </div>
                   </CardContent>
