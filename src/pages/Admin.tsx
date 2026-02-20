@@ -24,6 +24,7 @@ interface EntityConfig {
   instagramUrl: string;
   linkedinUrl: string;
   youtubeUrl: string;
+  xUrl: string;
 }
 
 const defaultConfig: EntityConfig = {
@@ -44,6 +45,7 @@ const defaultConfig: EntityConfig = {
   instagramUrl: "",
   linkedinUrl: "",
   youtubeUrl: "",
+  xUrl: "",
 };
 
 const pageCategories = [
@@ -183,6 +185,10 @@ const Admin = () => {
                       <div>
                         <label className="text-sm font-medium mb-1.5 block">YouTube URL</label>
                         <Input value={config.youtubeUrl} onChange={(e) => update("youtubeUrl", e.target.value)} placeholder="https://youtube.com/@..." className="h-9" />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-1.5 block">X (Twitter) URL</label>
+                        <Input value={config.xUrl} onChange={(e) => update("xUrl", e.target.value)} placeholder="https://x.com/..." className="h-9" />
                       </div>
                     </div>
                   </CardContent>
