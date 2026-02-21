@@ -32,13 +32,29 @@ interface Suggestion {
   loading: boolean;
 }
 
+const ACCEPTED_KEY = "aeo-accepted-duplicates";
+
+function loadAcceptedDuplicates(): string[] {
+  try { return JSON.parse(localStorage.getItem(ACCEPTED_KEY) || "[]"); }
+  catch { return []; }
+}
+
+function saveAcceptedDuplicates(accepted: string[]) {
+  localStorage.setItem(ACCEPTED_KEY, JSON.stringify(accepted));
+}
+
+// Normalize a question string into a stable key for comparison
+function normalizeQuestion(q: string): string {
+  return q.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
 const CannibalizationScanner = () => {
   const { toast } = useToast();
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<ScanResult | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<Record<string, Suggestion>>({});
-  const [accepted, setAccepted] = useState<Set<number>>(new Set());
+  const [acceptedInSession, setAcceptedInSession] = useState<Set<number>>(new Set());
 
   const handleScan = async () => {
     const pages = loadPages();
@@ -50,7 +66,7 @@ const CannibalizationScanner = () => {
     setScanning(true);
     setResult(null);
     setSuggestions({});
-    setAccepted(new Set());
+    setAcceptedInSession(new Set());
 
     try {
       const { data, error } = await supabase.functions.invoke("scan-cannibalization", {
@@ -60,10 +76,19 @@ const CannibalizationScanner = () => {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      setResult(data as ScanResult);
+      // Filter out previously accepted duplicates
+      const acceptedList = loadAcceptedDuplicates();
+      const filtered = {
+        ...data,
+        duplicates: (data.duplicates || []).filter(
+          (g: DuplicateGroup) => !acceptedList.includes(normalizeQuestion(g.question))
+        ),
+      };
+
+      setResult(filtered as ScanResult);
       toast({
-        title: data.duplicates?.length
-          ? `Found ${data.duplicates.length} duplicate question group(s)`
+        title: filtered.duplicates.length
+          ? `Found ${filtered.duplicates.length} duplicate question group(s)`
           : "No duplicate questions found ✓",
       });
     } catch (e: any) {
@@ -288,7 +313,7 @@ const CannibalizationScanner = () => {
 
           {/* Duplicate groups */}
           {result.duplicates.map((group, gi) => {
-            if (accepted.has(gi)) {
+            if (acceptedInSession.has(gi)) {
               return (
                 <Card key={gi} className="overflow-hidden opacity-60">
                   <CardContent className="pt-6 flex items-center gap-2 text-sm text-muted-foreground">
@@ -315,8 +340,12 @@ const CannibalizationScanner = () => {
                     size="sm"
                     className="shrink-0 gap-1.5"
                     onClick={() => {
-                      setAccepted((prev) => new Set(prev).add(gi));
-                      toast({ title: "Marked as acceptable" });
+                      // Persist to localStorage so it never shows again
+                      const current = loadAcceptedDuplicates();
+                      current.push(normalizeQuestion(group.question));
+                      saveAcceptedDuplicates(current);
+                      setAcceptedInSession((prev) => new Set(prev).add(gi));
+                      toast({ title: "Marked as acceptable — won't appear in future scans" });
                     }}
                   >
                     <CheckCircle className="h-3.5 w-3.5" />
