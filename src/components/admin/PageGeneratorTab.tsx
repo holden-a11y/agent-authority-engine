@@ -6,9 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Plus, X, Copy, Eye, Code, FileText, Trash2 } from "lucide-react";
+import { Plus, X, Copy, Eye, Code, FileText, Trash2, AlertTriangle, ShieldCheck } from "lucide-react";
 import { AeoPage, AeoPageCategory, AeoQuestion, PAGE_CATEGORIES, generateSlug, generatePageHtml, generateJsonLd } from "@/lib/aeo-types";
 import { useToast } from "@/hooks/use-toast";
+import { scanForFairHousingViolations, FairHousingFlag, FAIR_HOUSING_SHORT } from "@/lib/fair-housing";
 
 interface PageGeneratorTabProps {
   agentName: string;
@@ -128,6 +129,19 @@ const PageGeneratorTab = ({ agentName, market, socialUrls }: PageGeneratorTabPro
   const categoryLabel = (cat: AeoPageCategory) => PAGE_CATEGORIES.find((c) => c.value === cat)?.label ?? cat;
   const categoryCss = (cat: AeoPageCategory) => PAGE_CATEGORIES.find((c) => c.value === cat)?.color ?? "";
 
+  // Fair housing content scan
+  const fairHousingFlags: FairHousingFlag[] = editingPage
+    ? scanForFairHousingViolations(
+        [
+          editingPage.h1,
+          editingPage.title,
+          editingPage.metaDescription,
+          ...editingPage.h2Questions,
+          ...editingPage.accordionQA.map((qa) => `${qa.question} ${qa.answer}`),
+        ].join(" ")
+      )
+    : [];
+
   // ── List view ──
   if (!editingPage) {
     return (
@@ -234,6 +248,38 @@ const PageGeneratorTab = ({ agentName, market, socialUrls }: PageGeneratorTabPro
           <Button variant="gold" size="sm" onClick={savePage}>Save Page</Button>
         </div>
       </div>
+
+      {/* Fair Housing compliance banner */}
+      <Card className="border-amber-200 bg-amber-50/50">
+        <CardContent className="py-3 px-4">
+          <div className="flex items-start gap-3">
+            <ShieldCheck className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-amber-800">Fair Housing Compliance</p>
+              <p className="text-xs text-amber-700 mt-0.5">
+                All content must comply with the Federal Fair Housing Act. Avoid language that expresses preference or discrimination based on race, color, religion, sex, handicap, familial status, or national origin.
+              </p>
+              {fairHousingFlags.length > 0 && (
+                <div className="mt-2 space-y-1.5">
+                  {fairHousingFlags.map((flag, i) => (
+                    <div key={i} className="flex items-start gap-2 text-xs">
+                      <AlertTriangle className="h-3.5 w-3.5 text-red-500 shrink-0 mt-0.5" />
+                      <span className="text-red-700">
+                        <strong>"{flag.text}"</strong> — {flag.reason}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {fairHousingFlags.length === 0 && editingPage.h1 && (
+                <p className="text-xs text-green-700 mt-1.5 flex items-center gap-1">
+                  <ShieldCheck className="h-3 w-3" /> No fair housing issues detected in current content.
+                </p>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
