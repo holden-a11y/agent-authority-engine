@@ -13,8 +13,9 @@ export interface AeoPage {
   category: AeoPageCategory;
   status: AeoPageStatus;
   h1: string;
-  h2Questions: string[];
+  h2Questions: string[]; // kept for backward compat, no longer used in template
   accordionQA: AeoQuestion[];
+  relatedQuestions: { title: string; slug: string }[];
   youtubeVideoId: string;
   youtubeTranscript: string;
   metaDescription: string;
@@ -89,9 +90,9 @@ export function generatePageHtml(page: AeoPage, agentName: string, market: strin
     )
     .join("\n");
 
-  const h2Html = page.h2Questions
-    .map((q) => `    <section>\n      <h2>${q}</h2>\n      <p>[Content here]</p>\n    </section>`)
-    .join("\n\n");
+  const relatedLinks = (page.relatedQuestions || [])
+    .map((rq) => `      <li><a href="/pages/${rq.slug}">${rq.title}</a></li>`)
+    .join("\n");
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -111,11 +112,9 @@ ${JSON.stringify(jsonLd.localBusiness, null, 2)}
   <article>
     <h1>${page.h1}</h1>
 
-${h2Html}
-
     <section class="faq">
 ${qaHtml}
-    </section>${page.youtubeVideoId ? `\n\n    <section class="video">\n      <iframe src="https://www.youtube.com/embed/${page.youtubeVideoId}" allowfullscreen></iframe>\n    </section>` : ""}
+    </section>${page.youtubeVideoId ? `\n\n    <section class="video">\n      <iframe src="https://www.youtube.com/embed/${page.youtubeVideoId}" allowfullscreen></iframe>\n    </section>` : ""}${relatedLinks ? `\n\n    <section class="related">\n      <h2>Related Questions</h2>\n      <ul>\n${relatedLinks}\n      </ul>\n    </section>` : ""}
   </article>
 </body>
 </html>`;
