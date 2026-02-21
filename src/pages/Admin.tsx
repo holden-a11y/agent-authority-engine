@@ -98,7 +98,10 @@ function TagInput({ label, values, onChange, placeholder }: { label: string; val
 }
 
 const Admin = () => {
-  const [config, setConfig] = useState<EntityConfig>(defaultConfig);
+  const [config, setConfig] = useState<EntityConfig>(() => {
+    const stored = localStorage.getItem("aeo-entity-config");
+    return stored ? { ...defaultConfig, ...JSON.parse(stored) } : defaultConfig;
+  });
   const [saved, setSaved] = useState(false);
 
   const update = (key: keyof EntityConfig, value: any) => {
