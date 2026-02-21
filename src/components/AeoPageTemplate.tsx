@@ -4,6 +4,7 @@ import { AeoPage, loadCategories, generateJsonLd } from "@/lib/aeo-types";
 import { Layout } from "@/components/Layout";
 import { LeadCaptureForm } from "@/components/LeadCaptureForm";
 import { FAIR_HOUSING_DISCLAIMER } from "@/lib/fair-housing";
+import { getCoverImage } from "@/lib/cover-images";
 import { Link } from "react-router-dom";
 
 interface AeoPageTemplateProps {
@@ -17,37 +18,42 @@ const AeoPageTemplate = ({ page, agentName, market, socialUrls }: AeoPageTemplat
   const categories = loadCategories();
   const category = categories.find((c) => c.slug === page.categorySlug);
   const jsonLd = generateJsonLd(page, agentName, market, socialUrls);
+  const coverImage = getCoverImage(page.slug);
 
   return (
     <Layout>
-      {/* JSON-LD injection */}
+      {/* JSON-LD */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify((jsonLd as any).faqSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify((jsonLd as any).localBusiness) }} />
 
+      {/* Hero cover */}
+      <div className="relative h-64 md:h-80 overflow-hidden">
+        <img src={coverImage} alt="" className="w-full h-full object-cover" />
+        <div className="absolute inset-0 hero-overlay" />
+        <div className="absolute inset-0 flex items-end">
+          <div className="container-narrow px-4 pb-8 md:pb-12 w-full">
+            {category && (
+              <nav className="flex items-center gap-1.5 text-sm text-primary-foreground/70 mb-3">
+                <Link to={`/${category.slug}`} className="hover:text-primary-foreground transition-colors">
+                  {category.label}
+                </Link>
+                <span>/</span>
+                <span className="text-primary-foreground font-medium truncate">{page.title}</span>
+              </nav>
+            )}
+            {category && (
+              <Badge className="bg-accent text-accent-foreground border-0 mb-3">{category.label}</Badge>
+            )}
+            <h1 className="font-display text-2xl md:text-4xl lg:text-5xl font-bold text-primary-foreground leading-tight max-w-3xl">
+              {page.h1 || "[Primary Question H1]"}
+            </h1>
+          </div>
+        </div>
+      </div>
+
       <article className="section-padding">
         <div className="container-narrow">
-          {/* Breadcrumb: link to category */}
-          {category && (
-            <nav className="flex items-center gap-1.5 text-sm text-muted-foreground mb-4">
-              <Link to={`/${category.slug}`} className="hover:text-foreground transition-colors">
-                {category.label}
-              </Link>
-              <span className="text-muted-foreground">/</span>
-              <span className="text-foreground font-medium truncate">{page.title}</span>
-            </nav>
-          )}
-
-          {/* Category badge */}
-          {category && (
-            <Badge className={`${category.color} border-0 mb-4`}>{category.label}</Badge>
-          )}
-
-          {/* H1 */}
-          <h1 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-6 leading-tight">
-            {page.h1 || "[Primary Question H1]"}
-          </h1>
-
-          {/* Meta description preview */}
+          {/* Meta description */}
           <p className="text-muted-foreground text-lg mb-10 max-w-2xl">
             {page.metaDescription || "[Meta description — 155 characters max]"}
           </p>
@@ -99,7 +105,7 @@ const AeoPageTemplate = ({ page, agentName, market, socialUrls }: AeoPageTemplat
             <section className="mb-8">
               <Link
                 to={`/${category.slug}`}
-                className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
+                className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-accent transition-colors"
               >
                 ← Back to {category.label}
               </Link>
@@ -117,7 +123,7 @@ const AeoPageTemplate = ({ page, agentName, market, socialUrls }: AeoPageTemplat
             <LeadCaptureForm />
           </section>
 
-          {/* Fair Housing Disclaimer */}
+          {/* Fair Housing */}
           <footer className="mt-12 pt-6 border-t border-border">
             <div className="flex items-start gap-3">
               <img
