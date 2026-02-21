@@ -12,7 +12,7 @@ serve(async (req) => {
   try {
     const { pages } = await req.json();
     if (!pages || !Array.isArray(pages) || pages.length < 2) {
-      return new Response(JSON.stringify({ clusters: [], summary: "Need at least 2 pages to scan." }), {
+      return new Response(JSON.stringify({ duplicates: [], summary: "Need at least 2 pages to scan." }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -20,34 +20,41 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    // Build a compact representation of all pages for the LLM
-    const pageList = pages.map((p: any, i: number) => {
-      const questions = (p.accordionQA || []).map((qa: any) => qa.question).join("; ");
-      return `[${i + 1}] Title: "${p.title}" | Category: ${p.categorySlug} | FAQ questions: ${questions}`;
-    }).join("\n");
+    // Build a compact list of every question with its page
+    const questionList = pages.flatMap((p: any) =>
+      (p.accordionQA || []).map((qa: any) => ({
+        pageId: p.id,
+        pageTitle: p.title,
+        questionId: qa.id,
+        question: qa.question,
+      }))
+    );
 
-    const systemPrompt = `You are an SEO cannibalization auditor for a real estate agent's website. Your job is to find pages or FAQ questions that are too similar and would compete with each other in search results.
+    const questionsText = questionList
+      .map((q: any, i: number) => `[${i}] Page: "${q.pageTitle}" | Q: "${q.question}"`)
+      .join("\n");
+
+    const systemPrompt = `You are a duplicate-question detector for a real estate FAQ website. Your ONLY job is to find FAQ questions that are essentially the same or nearly identical across DIFFERENT pages.
 
 Rules:
-- Group overlapping pages into "clusters" where 2+ pages target essentially the same search intent or question.
-- For each cluster, list the page numbers involved, explain why they overlap, and give a specific recommendation (merge, differentiate, or delete).
-- Also flag individual FAQ questions that appear nearly identical across different pages (mention the page numbers and the duplicate questions).
-- A severity score: "low" (2 pages overlap slightly), "medium" (3+ pages or high overlap), "high" (4+ pages or near-identical content).
+- Only flag questions that appear on DIFFERENT pages and ask essentially the same thing.
+- Questions on the SAME page should NOT be flagged.
+- Do NOT flag questions that are merely related or in the same topic area — only flag true duplicates/near-duplicates where the wording is very similar or the intent is identical.
+- Group each set of duplicate questions together.
 - Return valid JSON only, no markdown. Schema:
 {
-  "clusters": [
+  "duplicates": [
     {
-      "severity": "low"|"medium"|"high",
-      "pageNumbers": [1, 3],
-      "pageTitles": ["...", "..."],
-      "reason": "...",
-      "recommendation": "...",
-      "duplicateQuestions": ["question text that appears in both"]
+      "question": "The common question text (pick the most representative wording)",
+      "instances": [
+        { "index": 0, "pageTitle": "...", "question": "exact question text from this page" },
+        { "index": 3, "pageTitle": "...", "question": "exact question text from this page" }
+      ]
     }
   ],
-  "summary": "Brief overall assessment"
+  "summary": "Brief summary like 'Found 3 duplicate question groups' or 'No duplicates found'"
 }
-If no cannibalization found, return empty clusters array with a positive summary.`;
+If no duplicates found, return empty duplicates array with a positive summary.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -59,7 +66,7 @@ If no cannibalization found, return empty clusters array with a positive summary
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Here are all ${pages.length} pages on the site:\n\n${pageList}\n\nAnalyze for cannibalization.` },
+          { role: "user", content: `Here are all ${questionList.length} FAQ questions across ${pages.length} pages:\n\n${questionsText}\n\nFind duplicate questions.` },
         ],
       }),
     });
@@ -83,13 +90,29 @@ If no cannibalization found, return empty clusters array with a positive summary
     const aiData = await response.json();
     const content = aiData.choices?.[0]?.message?.content || "";
 
-    // Parse JSON from response (strip markdown fences if present)
     let parsed;
     try {
       const jsonStr = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       parsed = JSON.parse(jsonStr);
     } catch {
-      parsed = { clusters: [], summary: content.slice(0, 500) };
+      parsed = { duplicates: [], summary: content.slice(0, 500) };
+    }
+
+    // Enrich with pageId and questionId from our original list
+    if (parsed.duplicates) {
+      for (const dup of parsed.duplicates) {
+        if (dup.instances) {
+          for (const inst of dup.instances) {
+            const original = questionList[inst.index];
+            if (original) {
+              inst.pageId = original.pageId;
+              inst.questionId = original.questionId;
+              inst.pageTitle = original.pageTitle;
+              inst.question = original.question;
+            }
+          }
+        }
+      }
     }
 
     return new Response(JSON.stringify(parsed), {
