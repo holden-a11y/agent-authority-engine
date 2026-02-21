@@ -2,8 +2,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Search, CheckCircle, Trash2, AlertTriangle } from "lucide-react";
-import { loadPages, savePages } from "@/lib/aeo-types";
+import { Loader2, Search, CheckCircle, Trash2, AlertTriangle, Plus, X, Sparkles } from "lucide-react";
+import { loadPages, savePages, AeoPage } from "@/lib/aeo-types";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -25,11 +25,19 @@ interface ScanResult {
   summary: string;
 }
 
+interface Suggestion {
+  pageId: string;
+  question: string;
+  answer: string;
+  loading: boolean;
+}
+
 const CannibalizationScanner = () => {
   const { toast } = useToast();
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<ScanResult | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<Record<string, Suggestion>>({});
 
   const handleScan = async () => {
     const pages = loadPages();
@@ -40,6 +48,7 @@ const CannibalizationScanner = () => {
 
     setScanning(true);
     setResult(null);
+    setSuggestions({});
 
     try {
       const { data, error } = await supabase.functions.invoke("scan-cannibalization", {
@@ -63,7 +72,42 @@ const CannibalizationScanner = () => {
     }
   };
 
-  const handleRemoveQuestion = (pageId: string, questionId: string, groupIndex: number) => {
+  const fetchSuggestion = async (page: AeoPage, removedQuestion: string) => {
+    const key = page.id;
+    setSuggestions((prev) => ({
+      ...prev,
+      [key]: { pageId: page.id, question: "", answer: "", loading: true },
+    }));
+
+    try {
+      const existingQuestions = page.accordionQA.map((qa) => qa.question);
+      const { data, error } = await supabase.functions.invoke("suggest-replacement-question", {
+        body: {
+          pageTitle: page.title,
+          existingQuestions,
+          removedQuestion,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      setSuggestions((prev) => ({
+        ...prev,
+        [key]: { pageId: page.id, question: data.question || "", answer: data.answer || "", loading: false },
+      }));
+    } catch (e: any) {
+      console.error("Suggestion error:", e);
+      toast({ title: "Couldn't generate suggestion", description: e.message, variant: "destructive" });
+      setSuggestions((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    }
+  };
+
+  const handleRemoveQuestion = async (pageId: string, questionId: string, groupIndex: number, removedQuestionText: string) => {
     const key = `${pageId}-${questionId}`;
     setRemoving(key);
 
@@ -80,7 +124,7 @@ const CannibalizationScanner = () => {
     );
     savePages(pages);
 
-    // Update the result to remove that instance
+    // Update the result
     if (result) {
       const updated = { ...result };
       const group = updated.duplicates[groupIndex];
@@ -88,7 +132,6 @@ const CannibalizationScanner = () => {
         group.instances = group.instances.filter(
           (inst) => !(inst.pageId === pageId && inst.questionId === questionId)
         );
-        // Remove group if only 1 instance left (no longer a duplicate)
         if (group.instances.length <= 1) {
           updated.duplicates.splice(groupIndex, 1);
         }
@@ -98,6 +141,45 @@ const CannibalizationScanner = () => {
 
     toast({ title: "Question removed from page" });
     setRemoving(null);
+
+    // Fetch suggestion for the page we just removed from
+    const updatedPages = loadPages();
+    const updatedPage = updatedPages.find((p) => p.id === pageId);
+    if (updatedPage) {
+      fetchSuggestion(updatedPage, removedQuestionText);
+    }
+  };
+
+  const handleInsertSuggestion = (pageId: string) => {
+    const suggestion = suggestions[pageId];
+    if (!suggestion || !suggestion.question) return;
+
+    const pages = loadPages();
+    const pageIndex = pages.findIndex((p) => p.id === pageId);
+    if (pageIndex === -1) return;
+
+    pages[pageIndex].accordionQA.push({
+      id: crypto.randomUUID(),
+      question: suggestion.question,
+      answer: suggestion.answer,
+    });
+    savePages(pages);
+
+    setSuggestions((prev) => {
+      const next = { ...prev };
+      delete next[pageId];
+      return next;
+    });
+
+    toast({ title: "Question added to page" });
+  };
+
+  const handleDismissSuggestion = (pageId: string) => {
+    setSuggestions((prev) => {
+      const next = { ...prev };
+      delete next[pageId];
+      return next;
+    });
   };
 
   return (
@@ -122,6 +204,62 @@ const CannibalizationScanner = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Suggestion cards (shown after removal) */}
+      {Object.entries(suggestions).map(([pageId, suggestion]) => {
+        const page = loadPages().find((p) => p.id === pageId);
+        return (
+          <Card key={pageId} className="border-2 border-dashed border-accent">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-accent-foreground" />
+                <CardTitle className="font-display text-sm">
+                  Suggested replacement for "{page?.title || "page"}"
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {suggestion.loading ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Generating a unique replacement question...
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">QUESTION</p>
+                    <p className="text-sm font-medium">{suggestion.question}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">ANSWER</p>
+                    <p className="text-sm">{suggestion.answer}</p>
+                  </div>
+                  <div className="flex items-center gap-2 pt-1">
+                    <Button
+                      variant="gold"
+                      size="sm"
+                      className="gap-1.5"
+                      onClick={() => handleInsertSuggestion(pageId)}
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Insert
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5"
+                      onClick={() => handleDismissSuggestion(pageId)}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                      Pass
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })}
 
       {result && (
         <>
@@ -161,7 +299,7 @@ const CannibalizationScanner = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-xs font-medium text-muted-foreground mb-3">
-                  FOUND ON THESE PAGES — click delete to remove it from that page
+                  FOUND ON THESE PAGES — click remove to delete it from that page
                 </p>
                 <div className="space-y-2">
                   {group.instances.map((inst, ii) => {
@@ -180,7 +318,7 @@ const CannibalizationScanner = () => {
                           size="sm"
                           className="shrink-0 gap-1.5"
                           disabled={isRemoving}
-                          onClick={() => handleRemoveQuestion(inst.pageId, inst.questionId, gi)}
+                          onClick={() => handleRemoveQuestion(inst.pageId, inst.questionId, gi, inst.question)}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                           {isRemoving ? "Removing..." : "Remove"}
