@@ -7,14 +7,14 @@ const corsHeaders = {
 };
 
 const PAGE_CATEGORIES = [
-  { value: "buying-guides", label: "Buying Guides", maxPages: 25 },
-  { value: "selling-guides", label: "Selling Guides", maxPages: 25 },
-  { value: "neighborhood", label: "Neighborhood Pages", maxPages: 20 },
-  { value: "market-insights", label: "Market Insights", maxPages: 8 },
-  { value: "first-time-buyer", label: "First-Time Buyer", maxPages: 10 },
+  { value: "buying-guides", label: "Buying Guides", maxPages: 5 },
+  { value: "selling-guides", label: "Selling Guides", maxPages: 5 },
+  { value: "neighborhood", label: "Neighborhood Pages", maxPages: 5 },
+  { value: "market-insights", label: "Market Insights", maxPages: 3 },
+  { value: "first-time-buyer", label: "First-Time Buyer", maxPages: 5 },
   { value: "entity-profile", label: "Entity Profile", maxPages: 1 },
-  { value: "niche-relocation", label: "Niche: Relocation", maxPages: 25 },
-  { value: "niche-school-districts", label: "Niche: School Districts", maxPages: 25 },
+  { value: "niche-relocation", label: "Niche: Relocation", maxPages: 5 },
+  { value: "niche-school-districts", label: "Niche: School Districts", maxPages: 5 },
 ];
 
 serve(async (req) => {
@@ -96,7 +96,7 @@ Generate as many quality, distinct pages as the provided information supports. F
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
@@ -125,7 +125,7 @@ Generate as many quality, distinct pages as the provided information supports. F
                         h2Questions: {
                           type: "array",
                           items: { type: "string" },
-                          description: "3-5 H2 sub-questions",
+                          description: "2-3 H2 sub-questions",
                         },
                         metaDescription: { type: "string", description: "SEO meta under 155 chars" },
                         faqItems: {
@@ -139,7 +139,7 @@ Generate as many quality, distinct pages as the provided information supports. F
                             required: ["question", "answer"],
                             additionalProperties: false,
                           },
-                          description: "3-5 FAQ Q&A pairs",
+                          description: "2 FAQ Q&A pairs",
                         },
                       },
                       required: ["title", "category", "h1", "h2Questions", "metaDescription", "faqItems"],

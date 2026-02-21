@@ -2,3 +2,6 @@ project_id = "zkwnxmioplufsrzzoaeo"
 
 [functions.generate-aeo-content]
 verify_jwt = false
+
+[functions.bulk-generate-pages]
+verify_jwt = false
