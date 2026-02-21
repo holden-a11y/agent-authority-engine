@@ -1,0 +1,4 @@
+project_id = "zkwnxmioplufsrzzoaeo"
+
+[functions.generate-aeo-content]
+verify_jwt = false
