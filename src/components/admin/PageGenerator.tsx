@@ -39,6 +39,7 @@ const PageGenerator = ({ agentName, market, socialUrls, entityConfig }: PageGene
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [newCategoryLabel, setNewCategoryLabel] = useState("");
   const [showAddCategory, setShowAddCategory] = useState(false);
+  const [selectedParentId, setSelectedParentId] = useState<string | null>(null);
 
   // ── Generate ──
   const handleGenerate = async () => {
@@ -132,7 +133,12 @@ const PageGenerator = ({ agentName, market, socialUrls, entityConfig }: PageGene
       toast({ title: "Pick a category first", variant: "destructive" });
       return;
     }
-    const finalPage: AeoPage = { ...draftPage, categorySlug: selectedCategory, status: "published" };
+    const finalPage: AeoPage = {
+      ...draftPage,
+      categorySlug: selectedCategory,
+      parentId: selectedParentId || undefined,
+      status: "published",
+    };
     const updated = [...pages, finalPage];
     setPages(updated);
     savePages(updated);
@@ -154,6 +160,7 @@ const PageGenerator = ({ agentName, market, socialUrls, entityConfig }: PageGene
     setQuestion("");
     setDraftPage(null);
     setSelectedCategory("");
+    setSelectedParentId(null);
   };
 
   // ── Fair housing ──
@@ -312,6 +319,48 @@ const PageGenerator = ({ agentName, market, socialUrls, entityConfig }: PageGene
                   <Button variant="ghost" size="sm" onClick={() => setShowAddCategory(false)}>Cancel</Button>
                 </div>
               )}
+
+              {/* Parent page selection */}
+              {selectedCategory && (() => {
+                const potentialParents = pages.filter(
+                  (p) => p.categorySlug === selectedCategory && !p.parentId
+                );
+                if (potentialParents.length === 0) return null;
+                return (
+                  <div className="mt-4 pt-4 border-t border-border">
+                    <label className="text-sm font-medium mb-2 block">
+                      Make this a child page? <span className="text-muted-foreground font-normal">(optional)</span>
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant={!selectedParentId ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setSelectedParentId(null)}
+                      >
+                        {!selectedParentId && <Check className="h-3 w-3 mr-1" />}
+                        Top-level page
+                      </Button>
+                      {potentialParents.map((p) => (
+                        <Button
+                          key={p.id}
+                          variant={selectedParentId === p.id ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setSelectedParentId(p.id)}
+                          className="gap-1.5 max-w-xs truncate"
+                        >
+                          {selectedParentId === p.id && <Check className="h-3 w-3" />}
+                          ↳ {p.title}
+                        </Button>
+                      ))}
+                    </div>
+                    {selectedParentId && (
+                      <p className="text-xs text-muted-foreground mt-2">
+                        This page will appear as a child link on its parent page.
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
 
               <div className="flex gap-3 pt-4">
                 <Button variant="gold" onClick={handleSavePage} disabled={!selectedCategory} className="gap-1.5">
