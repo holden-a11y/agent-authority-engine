@@ -1,11 +1,10 @@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
-import { AeoPage, PAGE_CATEGORIES, generateJsonLd } from "@/lib/aeo-types";
+import { AeoPage, loadCategories, generateJsonLd } from "@/lib/aeo-types";
 import { Layout } from "@/components/Layout";
 import { LeadCaptureForm } from "@/components/LeadCaptureForm";
 import { FAIR_HOUSING_DISCLAIMER } from "@/lib/fair-housing";
 import { Link } from "react-router-dom";
-import { ChevronRight } from "lucide-react";
 
 interface AeoPageTemplateProps {
   page: AeoPage;
@@ -15,44 +14,25 @@ interface AeoPageTemplateProps {
 }
 
 const AeoPageTemplate = ({ page, agentName, market, socialUrls }: AeoPageTemplateProps) => {
-  const category = PAGE_CATEGORIES.find((c) => c.value === page.category);
+  const categories = loadCategories();
+  const category = categories.find((c) => c.slug === page.categorySlug);
   const jsonLd = generateJsonLd(page, agentName, market, socialUrls);
-  const relatedQuestions = page.relatedQuestions || [];
-
-  // Load parent page for breadcrumb
-  let parentPage: AeoPage | null = null;
-  if (page.parentSlug) {
-    try {
-      const allPages: AeoPage[] = JSON.parse(localStorage.getItem("aeo-pages") || "[]");
-      parentPage = allPages.find((p) => p.slug === page.parentSlug) || null;
-    } catch {}
-  }
-
-  // Separate parent link from child links
-  const childLinks = relatedQuestions.filter((rq) => rq.slug !== page.parentSlug);
-  const hasParentInRelated = relatedQuestions.some((rq) => rq.slug === page.parentSlug);
 
   return (
     <Layout>
       {/* JSON-LD injection */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify((jsonLd as any).faqSchema) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify((jsonLd as any).localBusiness) }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify((jsonLd as any).faqSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify((jsonLd as any).localBusiness) }} />
 
       <article className="section-padding">
         <div className="container-narrow">
-          {/* Breadcrumb */}
-          {parentPage && (
+          {/* Breadcrumb: link to category */}
+          {category && (
             <nav className="flex items-center gap-1.5 text-sm text-muted-foreground mb-4">
-              <Link to={`/pages/${parentPage.slug}`} className="hover:text-foreground transition-colors truncate max-w-[300px]">
-                {parentPage.title}
+              <Link to={`/${category.slug}`} className="hover:text-foreground transition-colors">
+                {category.label}
               </Link>
-              <ChevronRight className="h-3 w-3 shrink-0" />
+              <span className="text-muted-foreground">/</span>
               <span className="text-foreground font-medium truncate">{page.title}</span>
             </nav>
           )}
@@ -114,37 +94,14 @@ const AeoPageTemplate = ({ page, agentName, market, socialUrls }: AeoPageTemplat
             </section>
           )}
 
-          {/* Child page links */}
-          {childLinks.length > 0 && (
-            <section className="mb-12">
-              <h2 className="font-display text-xl md:text-2xl font-semibold text-foreground mb-4">
-                Explore Related Topics
-              </h2>
-              <div className="grid gap-2">
-                {childLinks.map((rq, i) => (
-                  <Link
-                    key={i}
-                    to={`/pages/${rq.slug}`}
-                    className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/40 hover:bg-primary/5 transition-colors group"
-                  >
-                    <span className="text-primary font-bold text-lg">→</span>
-                    <span className="text-sm md:text-base font-medium group-hover:text-primary transition-colors">
-                      {rq.title}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Back to parent */}
-          {parentPage && (
+          {/* Back to category */}
+          {category && (
             <section className="mb-8">
               <Link
-                to={`/pages/${parentPage.slug}`}
+                to={`/${category.slug}`}
                 className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
               >
-                ← Back to: {parentPage.title}
+                ← Back to {category.label}
               </Link>
             </section>
           )}

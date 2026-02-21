@@ -6,44 +6,34 @@ export interface AeoQuestion {
 
 export type AeoPageStatus = "draft" | "published";
 
+export interface NavCategory {
+  slug: string;
+  label: string;
+  color: string;
+  isDefault: boolean; // true for the 5 built-in categories
+}
+
+export const DEFAULT_CATEGORIES: NavCategory[] = [
+  { slug: "buyers", label: "Buyers", color: "bg-blue-100 text-blue-800", isDefault: true },
+  { slug: "sellers", label: "Sellers", color: "bg-green-100 text-green-800", isDefault: true },
+  { slug: "neighborhoods", label: "Neighborhoods", color: "bg-amber-100 text-amber-800", isDefault: true },
+  { slug: "market-insights", label: "Market Insights", color: "bg-purple-100 text-purple-800", isDefault: true },
+  { slug: "entity", label: "Entity", color: "bg-slate-100 text-slate-800", isDefault: true },
+];
+
 export interface AeoPage {
   id: string;
-  title: string;
-  slug: string;
-  category: AeoPageCategory;
+  title: string;        // the question
+  slug: string;          // derived from the question
+  categorySlug: string;  // which nav category this lives under
   status: AeoPageStatus;
-  h1: string;
-  h2Questions: string[]; // deprecated, kept for backward compat
+  h1: string;            // same as title (the question)
   accordionQA: AeoQuestion[];
-  relatedQuestions: { title: string; slug: string }[];
-  parentSlug?: string;
-  depth?: number; // 0 = parent, 1 = child, 2 = grandchild, etc.
   youtubeVideoId: string;
   youtubeTranscript: string;
   metaDescription: string;
   createdAt: string;
 }
-
-export type AeoPageCategory =
-  | "buying-guides"
-  | "selling-guides"
-  | "neighborhood"
-  | "market-insights"
-  | "first-time-buyer"
-  | "entity-profile"
-  | "niche-relocation"
-  | "niche-school-districts";
-
-export const PAGE_CATEGORIES: { value: AeoPageCategory; label: string; color: string; description: string }[] = [
-  { value: "buying-guides", label: "Buying Guides", color: "bg-blue-100 text-blue-800", description: "Guides for homebuyers in your market" },
-  { value: "selling-guides", label: "Selling Guides", color: "bg-green-100 text-green-800", description: "Guides for home sellers" },
-  { value: "neighborhood", label: "Neighborhood Pages", color: "bg-amber-100 text-amber-800", description: "Community and neighborhood profiles" },
-  { value: "market-insights", label: "Market Insights", color: "bg-purple-100 text-purple-800", description: "Local market data and trends" },
-  { value: "first-time-buyer", label: "First-Time Buyer", color: "bg-pink-100 text-pink-800", description: "Content for first-time homebuyers" },
-  { value: "entity-profile", label: "Entity Profile", color: "bg-slate-100 text-slate-800", description: "Your agent authority page" },
-  { value: "niche-relocation", label: "Niche: Relocation", color: "bg-orange-100 text-orange-800", description: "Relocation-focused content" },
-  { value: "niche-school-districts", label: "Niche: School Districts", color: "bg-teal-100 text-teal-800", description: "School district community pages" },
-];
 
 export function generateSlug(title: string): string {
   return title
@@ -52,6 +42,27 @@ export function generateSlug(title: string): string {
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-")
     .trim();
+}
+
+export function loadCategories(): NavCategory[] {
+  try {
+    const stored = localStorage.getItem("aeo-categories");
+    if (stored) return JSON.parse(stored);
+  } catch {}
+  return [...DEFAULT_CATEGORIES];
+}
+
+export function saveCategories(cats: NavCategory[]) {
+  localStorage.setItem("aeo-categories", JSON.stringify(cats));
+}
+
+export function loadPages(): AeoPage[] {
+  try { return JSON.parse(localStorage.getItem("aeo-pages") || "[]"); }
+  catch { return []; }
+}
+
+export function savePages(pages: AeoPage[]) {
+  localStorage.setItem("aeo-pages", JSON.stringify(pages));
 }
 
 export function generateJsonLd(page: AeoPage, agentName: string, market: string, socialUrls: string[]): { faqSchema: object; localBusiness: object } {
@@ -73,51 +84,9 @@ export function generateJsonLd(page: AeoPage, agentName: string, market: string,
     "@type": "RealEstateAgent",
     name: agentName,
     areaServed: market,
-    url: window.location.origin,
+    url: typeof window !== "undefined" ? window.location.origin : "",
     sameAs: socialUrls.filter(Boolean),
   };
 
   return { faqSchema, localBusiness };
-}
-
-export function generatePageHtml(page: AeoPage, agentName: string, market: string, socialUrls: string[]): string {
-  const jsonLd = generateJsonLd(page, agentName, market, socialUrls);
-  
-  const qaHtml = page.accordionQA
-    .map(
-      (qa) => `    <details>
-      <summary>${qa.question}</summary>
-      <p>${qa.answer || "[Answer content here]"}</p>
-    </details>`
-    )
-    .join("\n");
-
-  const relatedLinks = (page.relatedQuestions || [])
-    .map((rq) => `      <li><a href="/pages/${rq.slug}">${rq.title}</a></li>`)
-    .join("\n");
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${page.title} | ${agentName}</title>
-  <meta name="description" content="${page.metaDescription}" />
-  <script type="application/ld+json">
-${JSON.stringify(jsonLd.faqSchema, null, 2)}
-  </script>
-  <script type="application/ld+json">
-${JSON.stringify(jsonLd.localBusiness, null, 2)}
-  </script>
-</head>
-<body>
-  <article>
-    <h1>${page.h1}</h1>
-
-    <section class="faq">
-${qaHtml}
-    </section>${page.youtubeVideoId ? `\n\n    <section class="video">\n      <iframe src="https://www.youtube.com/embed/${page.youtubeVideoId}" allowfullscreen></iframe>\n    </section>` : ""}${relatedLinks ? `\n\n    <section class="related">\n      <h2>Related Questions</h2>\n      <ul>\n${relatedLinks}\n      </ul>\n    </section>` : ""}
-  </article>
-</body>
-</html>`;
 }
