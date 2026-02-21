@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { AeoPage, PAGE_CATEGORIES, generateJsonLd } from "@/lib/aeo-types";
 import { Layout } from "@/components/Layout";
 import { LeadCaptureForm } from "@/components/LeadCaptureForm";
+import { FAIR_HOUSING_DISCLAIMER } from "@/lib/fair-housing";
 
 interface AeoPageTemplateProps {
   page: AeoPage;
@@ -111,6 +112,21 @@ const AeoPageTemplate = ({ page, agentName, market, socialUrls }: AeoPageTemplat
             </p>
             <LeadCaptureForm />
           </section>
+
+          {/* Fair Housing Disclaimer */}
+          <footer className="mt-12 pt-6 border-t border-border">
+            <div className="flex items-start gap-3">
+              <img
+                src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2d/Equal_Housing_Opportunity.svg/120px-Equal_Housing_Opportunity.svg.png"
+                alt="Equal Housing Opportunity logo"
+                className="w-8 h-8 shrink-0 mt-0.5"
+                loading="lazy"
+              />
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                {FAIR_HOUSING_DISCLAIMER}
+              </p>
+            </div>
+          </footer>
         </div>
       </article>
     </Layout>
