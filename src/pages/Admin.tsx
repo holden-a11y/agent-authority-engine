@@ -4,8 +4,9 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Settings, FileText } from "lucide-react";
+import { Settings, FileText, SearchCheck } from "lucide-react";
 import PageGenerator from "@/components/admin/PageGenerator";
+import CannibalizationScanner from "@/components/admin/CannibalizationScanner";
 
 interface EntityConfig {
   agentName: string;
@@ -74,6 +75,7 @@ const Admin = () => {
           <TabsList className="bg-card border border-border">
             <TabsTrigger value="entity" className="gap-1.5"><Settings className="h-3.5 w-3.5" /> Agent Config</TabsTrigger>
             <TabsTrigger value="pages" className="gap-1.5"><FileText className="h-3.5 w-3.5" /> Page Generator</TabsTrigger>
+            <TabsTrigger value="cannibalization" className="gap-1.5"><SearchCheck className="h-3.5 w-3.5" /> Cannibalization</TabsTrigger>
           </TabsList>
 
           {/* Agent Config */}
@@ -157,6 +159,11 @@ const Admin = () => {
               ].filter(Boolean)}
               entityConfig={config}
             />
+          </TabsContent>
+
+          {/* Cannibalization Scanner */}
+          <TabsContent value="cannibalization">
+            <CannibalizationScanner />
           </TabsContent>
         </Tabs>
       </div>
