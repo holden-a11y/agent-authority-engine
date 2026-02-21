@@ -19,7 +19,7 @@ interface EntityConfig {
   keyEmployers: string[];
   agentBio: string;
   voiceToneNotes: string;
-  fubWebhookUrl: string;
+  fubApiKey: string;
   googleBusinessProfile: string;
   facebookUrl: string;
   instagramUrl: string;
@@ -41,7 +41,7 @@ const defaultConfig: EntityConfig = {
   keyEmployers: ["Corewell Health", "Meijer", "Amway", "GE Aerospace"],
   agentBio: "",
   voiceToneNotes: "",
-  fubWebhookUrl: "",
+  fubApiKey: "",
   googleBusinessProfile: "",
   facebookUrl: "https://www.facebook.com/profile.php?id=61585877413251",
   instagramUrl: "https://www.instagram.com/holdengr.re",
@@ -164,8 +164,8 @@ const Admin = () => {
                         <Input value={config.teamName} onChange={(e) => update("teamName", e.target.value)} placeholder="e.g. The Richardson Group" className="h-9" />
                       </div>
                       <div>
-                        <label className="text-sm font-medium mb-1.5 block">Follow Up Boss Webhook URL</label>
-                        <Input value={config.fubWebhookUrl} onChange={(e) => update("fubWebhookUrl", e.target.value)} placeholder="https://..." className="h-9" />
+                        <label className="text-sm font-medium mb-1.5 block">Follow Up Boss API Key</label>
+                        <Input value={config.fubApiKey} onChange={(e) => update("fubApiKey", e.target.value)} placeholder="fka_..." type="password" className="h-9" />
                       </div>
                       <div>
                         <label className="text-sm font-medium mb-1.5 block">Google Business Profile URL</label>
