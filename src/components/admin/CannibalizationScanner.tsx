@@ -2,35 +2,34 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Search, AlertTriangle, CheckCircle } from "lucide-react";
-import { loadPages } from "@/lib/aeo-types";
+import { Loader2, Search, CheckCircle, Trash2, AlertTriangle } from "lucide-react";
+import { loadPages, savePages } from "@/lib/aeo-types";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-interface Cluster {
-  severity: "low" | "medium" | "high";
-  pageNumbers: number[];
-  pageTitles: string[];
-  reason: string;
-  recommendation: string;
-  duplicateQuestions?: string[];
+interface DuplicateInstance {
+  index: number;
+  pageId: string;
+  pageTitle: string;
+  question: string;
+  questionId: string;
+}
+
+interface DuplicateGroup {
+  question: string;
+  instances: DuplicateInstance[];
 }
 
 interface ScanResult {
-  clusters: Cluster[];
+  duplicates: DuplicateGroup[];
   summary: string;
 }
-
-const severityConfig = {
-  low: { color: "bg-yellow-100 text-yellow-800 border-yellow-200", icon: "⚠️" },
-  medium: { color: "bg-orange-100 text-orange-800 border-orange-200", icon: "🔶" },
-  high: { color: "bg-red-100 text-red-800 border-red-200", icon: "🔴" },
-};
 
 const CannibalizationScanner = () => {
   const { toast } = useToast();
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<ScanResult | null>(null);
+  const [removing, setRemoving] = useState<string | null>(null);
 
   const handleScan = async () => {
     const pages = loadPages();
@@ -52,9 +51,9 @@ const CannibalizationScanner = () => {
 
       setResult(data as ScanResult);
       toast({
-        title: data.clusters?.length
-          ? `Found ${data.clusters.length} overlap cluster(s)`
-          : "No cannibalization detected ✓",
+        title: data.duplicates?.length
+          ? `Found ${data.duplicates.length} duplicate question group(s)`
+          : "No duplicate questions found ✓",
       });
     } catch (e: any) {
       console.error("Scan error:", e);
@@ -64,12 +63,49 @@ const CannibalizationScanner = () => {
     }
   };
 
+  const handleRemoveQuestion = (pageId: string, questionId: string, groupIndex: number) => {
+    const key = `${pageId}-${questionId}`;
+    setRemoving(key);
+
+    const pages = loadPages();
+    const pageIndex = pages.findIndex((p) => p.id === pageId);
+    if (pageIndex === -1) {
+      toast({ title: "Page not found", variant: "destructive" });
+      setRemoving(null);
+      return;
+    }
+
+    pages[pageIndex].accordionQA = pages[pageIndex].accordionQA.filter(
+      (qa) => qa.id !== questionId
+    );
+    savePages(pages);
+
+    // Update the result to remove that instance
+    if (result) {
+      const updated = { ...result };
+      const group = updated.duplicates[groupIndex];
+      if (group) {
+        group.instances = group.instances.filter(
+          (inst) => !(inst.pageId === pageId && inst.questionId === questionId)
+        );
+        // Remove group if only 1 instance left (no longer a duplicate)
+        if (group.instances.length <= 1) {
+          updated.duplicates.splice(groupIndex, 1);
+        }
+      }
+      setResult(updated);
+    }
+
+    toast({ title: "Question removed from page" });
+    setRemoving(null);
+  };
+
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-display text-2xl font-bold">Cannibalization Scanner</h2>
+        <h2 className="font-display text-2xl font-bold">Duplicate Question Scanner</h2>
         <p className="text-muted-foreground text-sm mt-1">
-          Scan all your pages for overlapping content, duplicate questions, and keyword cannibalization using AI analysis.
+          Find FAQ questions that appear nearly identical across different pages, then remove them where you don't want them.
         </p>
       </div>
 
@@ -78,7 +114,7 @@ const CannibalizationScanner = () => {
           <div className="flex items-center gap-4">
             <Button variant="gold" onClick={handleScan} disabled={scanning} className="gap-1.5">
               {scanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-              {scanning ? "Scanning..." : "Run Cannibalization Scan"}
+              {scanning ? "Scanning..." : "Scan for Duplicates"}
             </Button>
             <span className="text-sm text-muted-foreground">
               {loadPages().length} pages will be analyzed
@@ -93,16 +129,16 @@ const CannibalizationScanner = () => {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-start gap-3">
-                {result.clusters.length > 0 ? (
+                {result.duplicates.length > 0 ? (
                   <AlertTriangle className="h-5 w-5 text-orange-500 shrink-0 mt-0.5" />
                 ) : (
                   <CheckCircle className="h-5 w-5 text-green-500 shrink-0 mt-0.5" />
                 )}
                 <div>
                   <p className="font-medium text-sm">
-                    {result.clusters.length > 0
-                      ? `${result.clusters.length} overlap cluster(s) found`
-                      : "All clear — no cannibalization detected"}
+                    {result.duplicates.length > 0
+                      ? `${result.duplicates.length} duplicate question group(s) found`
+                      : "All clear — no duplicate questions detected"}
                   </p>
                   <p className="text-sm text-muted-foreground mt-1">{result.summary}</p>
                 </div>
@@ -110,69 +146,52 @@ const CannibalizationScanner = () => {
             </CardContent>
           </Card>
 
-          {/* Clusters */}
-          {result.clusters.map((cluster, i) => {
-            const config = severityConfig[cluster.severity] || severityConfig.low;
-            return (
-              <Card key={i} className="overflow-hidden">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-2">
-                    <span>{config.icon}</span>
-                    <CardTitle className="font-display text-base">
-                      Overlap Cluster #{i + 1}
-                    </CardTitle>
-                    <Badge className={`${config.color} border text-xs`}>
-                      {cluster.severity}
-                    </Badge>
-                    <Badge variant="outline" className="text-xs">
-                      {cluster.pageNumbers.length} pages
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {/* Affected pages */}
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground mb-1.5">AFFECTED PAGES</p>
-                    <div className="space-y-1">
-                      {cluster.pageTitles.map((title, j) => (
-                        <p key={j} className="text-sm">
-                          <span className="text-muted-foreground mr-1.5">#{cluster.pageNumbers[j]}</span>
-                          {title}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Reason */}
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground mb-1">WHY IT OVERLAPS</p>
-                    <p className="text-sm">{cluster.reason}</p>
-                  </div>
-
-                  {/* Duplicate questions */}
-                  {cluster.duplicateQuestions && cluster.duplicateQuestions.length > 0 && (
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground mb-1">DUPLICATE QUESTIONS</p>
-                      <ul className="space-y-1">
-                        {cluster.duplicateQuestions.map((q, k) => (
-                          <li key={k} className="text-sm text-orange-700 flex items-start gap-1.5">
-                            <span className="shrink-0">•</span>
-                            <span>"{q}"</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {/* Recommendation */}
-                  <div className="bg-muted/50 rounded-lg p-3">
-                    <p className="text-xs font-medium text-muted-foreground mb-1">RECOMMENDATION</p>
-                    <p className="text-sm font-medium">{cluster.recommendation}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+          {/* Duplicate groups */}
+          {result.duplicates.map((group, gi) => (
+            <Card key={gi} className="overflow-hidden">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <CardTitle className="font-display text-base">
+                    "{group.question}"
+                  </CardTitle>
+                  <Badge variant="outline" className="text-xs shrink-0">
+                    {group.instances.length} pages
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xs font-medium text-muted-foreground mb-3">
+                  FOUND ON THESE PAGES — click delete to remove it from that page
+                </p>
+                <div className="space-y-2">
+                  {group.instances.map((inst, ii) => {
+                    const isRemoving = removing === `${inst.pageId}-${inst.questionId}`;
+                    return (
+                      <div
+                        key={ii}
+                        className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border bg-muted/30"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{inst.pageTitle}</p>
+                          <p className="text-xs text-muted-foreground truncate">"{inst.question}"</p>
+                        </div>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="shrink-0 gap-1.5"
+                          disabled={isRemoving}
+                          onClick={() => handleRemoveQuestion(inst.pageId, inst.questionId, gi)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          {isRemoving ? "Removing..." : "Remove"}
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </>
       )}
     </div>
