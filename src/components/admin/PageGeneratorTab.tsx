@@ -1,0 +1,405 @@
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Plus, X, Copy, Eye, Code, FileText, Trash2 } from "lucide-react";
+import { AeoPage, AeoPageCategory, AeoQuestion, PAGE_CATEGORIES, generateSlug, generatePageHtml, generateJsonLd } from "@/lib/aeo-types";
+import { useToast } from "@/hooks/use-toast";
+
+interface PageGeneratorTabProps {
+  agentName: string;
+  market: string;
+  socialUrls: string[];
+}
+
+const createEmptyPage = (category: AeoPageCategory): AeoPage => ({
+  id: crypto.randomUUID(),
+  title: "",
+  slug: "",
+  category,
+  h1: "",
+  h2Questions: ["", "", ""],
+  accordionQA: [
+    { id: crypto.randomUUID(), question: "", answer: "" },
+    { id: crypto.randomUUID(), question: "", answer: "" },
+    { id: crypto.randomUUID(), question: "", answer: "" },
+  ],
+  youtubeVideoId: "",
+  youtubeTranscript: "",
+  metaDescription: "",
+  createdAt: new Date().toISOString(),
+});
+
+const PageGeneratorTab = ({ agentName, market, socialUrls }: PageGeneratorTabProps) => {
+  const { toast } = useToast();
+  const [pages, setPages] = useState<AeoPage[]>(() => {
+    const saved = localStorage.getItem("aeo-pages");
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [editingPage, setEditingPage] = useState<AeoPage | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<AeoPageCategory>("buying-guides");
+  const [showHtml, setShowHtml] = useState(false);
+
+  const savePages = (updated: AeoPage[]) => {
+    setPages(updated);
+    localStorage.setItem("aeo-pages", JSON.stringify(updated));
+  };
+
+  const startNewPage = () => {
+    setEditingPage(createEmptyPage(selectedCategory));
+    setShowHtml(false);
+  };
+
+  const savePage = () => {
+    if (!editingPage) return;
+    const existing = pages.findIndex((p) => p.id === editingPage.id);
+    const updated = existing >= 0
+      ? pages.map((p) => (p.id === editingPage.id ? editingPage : p))
+      : [...pages, editingPage];
+    savePages(updated);
+    setEditingPage(null);
+    toast({ title: "Page saved", description: `"${editingPage.title}" has been saved.` });
+  };
+
+  const deletePage = (id: string) => {
+    savePages(pages.filter((p) => p.id !== id));
+    toast({ title: "Page deleted" });
+  };
+
+  const updateField = <K extends keyof AeoPage>(key: K, value: AeoPage[K]) => {
+    if (!editingPage) return;
+    const updated = { ...editingPage, [key]: value };
+    if (key === "title") updated.slug = generateSlug(value as string);
+    setEditingPage(updated);
+  };
+
+  const updateH2 = (index: number, value: string) => {
+    if (!editingPage) return;
+    const h2s = [...editingPage.h2Questions];
+    h2s[index] = value;
+    setEditingPage({ ...editingPage, h2Questions: h2s });
+  };
+
+  const addH2 = () => {
+    if (!editingPage) return;
+    setEditingPage({ ...editingPage, h2Questions: [...editingPage.h2Questions, ""] });
+  };
+
+  const removeH2 = (index: number) => {
+    if (!editingPage) return;
+    setEditingPage({ ...editingPage, h2Questions: editingPage.h2Questions.filter((_, i) => i !== index) });
+  };
+
+  const updateQA = (id: string, field: keyof AeoQuestion, value: string) => {
+    if (!editingPage) return;
+    setEditingPage({
+      ...editingPage,
+      accordionQA: editingPage.accordionQA.map((qa) => (qa.id === id ? { ...qa, [field]: value } : qa)),
+    });
+  };
+
+  const addQA = () => {
+    if (!editingPage) return;
+    setEditingPage({
+      ...editingPage,
+      accordionQA: [...editingPage.accordionQA, { id: crypto.randomUUID(), question: "", answer: "" }],
+    });
+  };
+
+  const removeQA = (id: string) => {
+    if (!editingPage) return;
+    setEditingPage({
+      ...editingPage,
+      accordionQA: editingPage.accordionQA.filter((qa) => qa.id !== id),
+    });
+  };
+
+  const copyHtml = () => {
+    if (!editingPage) return;
+    const html = generatePageHtml(editingPage, agentName, market, socialUrls);
+    navigator.clipboard.writeText(html);
+    toast({ title: "Copied!", description: "HTML with JSON-LD copied to clipboard." });
+  };
+
+  const categoryLabel = (cat: AeoPageCategory) => PAGE_CATEGORIES.find((c) => c.value === cat)?.label ?? cat;
+  const categoryCss = (cat: AeoPageCategory) => PAGE_CATEGORIES.find((c) => c.value === cat)?.color ?? "";
+
+  // ── List view ──
+  if (!editingPage) {
+    return (
+      <div className="space-y-6">
+        {/* Top bar */}
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-end justify-between">
+          <div>
+            <h2 className="font-display text-2xl font-bold">Page Generator</h2>
+            <p className="text-muted-foreground text-sm mt-1">Create AEO-optimized pages with structured Q&A, JSON-LD schema, and accordion sections.</p>
+          </div>
+          <div className="flex gap-2 items-center">
+            <Select value={selectedCategory} onValueChange={(v) => setSelectedCategory(v as AeoPageCategory)}>
+              <SelectTrigger className="w-[200px] h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PAGE_CATEGORIES.map((c) => (
+                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button variant="gold" size="sm" onClick={startNewPage} className="gap-1.5">
+              <Plus className="h-3.5 w-3.5" /> New Page
+            </Button>
+          </div>
+        </div>
+
+        {/* Page list by category */}
+        {PAGE_CATEGORIES.map((cat) => {
+          const catPages = pages.filter((p) => p.category === cat.value);
+          if (catPages.length === 0) return null;
+          return (
+            <Card key={cat.value}>
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <CardTitle className="font-display text-lg">{cat.label}</CardTitle>
+                  <Badge className={`${cat.color} border-0 text-xs`}>{catPages.length}</Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="divide-y">
+                  {catPages.map((p) => (
+                    <div key={p.id} className="py-3 flex items-center justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm truncate">{p.title || "(Untitled)"}</p>
+                        <p className="text-xs text-muted-foreground truncate">/{p.slug || "..."}</p>
+                      </div>
+                      <div className="flex gap-1.5 shrink-0">
+                        <Button variant="ghost" size="sm" onClick={() => { setEditingPage(p); setShowHtml(false); }} className="h-7 gap-1 text-xs">
+                          <FileText className="h-3 w-3" /> Edit
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => window.open(`/pages/${p.slug}`, "_blank")} className="h-7 gap-1 text-xs">
+                          <Eye className="h-3 w-3" /> View
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => deletePage(p.id)} className="h-7 text-destructive hover:text-destructive">
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+
+        {pages.length === 0 && (
+          <Card className="p-12 text-center">
+            <FileText className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+            <h3 className="font-display text-xl font-semibold mb-2">No pages yet</h3>
+            <p className="text-muted-foreground text-sm max-w-md mx-auto mb-6">
+              Select a category above and click "New Page" to generate your first AEO-optimized page with H1/H2 question structure, accordion Q&A, and JSON-LD schema.
+            </p>
+            <Button variant="gold" onClick={startNewPage} className="gap-1.5">
+              <Plus className="h-4 w-4" /> Create First Page
+            </Button>
+          </Card>
+        )}
+      </div>
+    );
+  }
+
+  // ── Editor view ──
+  const htmlOutput = generatePageHtml(editingPage, agentName, market, socialUrls);
+
+  return (
+    <div className="space-y-6">
+      {/* Editor header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={() => setEditingPage(null)}>← Back</Button>
+          <Badge className={`${categoryCss(editingPage.category)} border-0`}>{categoryLabel(editingPage.category)}</Badge>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => setShowHtml(!showHtml)} className="gap-1.5">
+            <Code className="h-3.5 w-3.5" /> {showHtml ? "Hide HTML" : "View HTML"}
+          </Button>
+          <Button variant="outline" size="sm" onClick={copyHtml} className="gap-1.5">
+            <Copy className="h-3.5 w-3.5" /> Copy HTML
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => window.open(`/pages/${editingPage.slug}`, "_blank")} className="gap-1.5" disabled={!editingPage.slug}>
+            <Eye className="h-3.5 w-3.5" /> Preview
+          </Button>
+          <Button variant="gold" size="sm" onClick={savePage}>Save Page</Button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          {/* Title & Meta */}
+          <Card>
+            <CardHeader><CardTitle className="font-display text-xl">Page Identity</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium mb-1.5 block">Page Title</label>
+                  <Input value={editingPage.title} onChange={(e) => updateField("title", e.target.value)} placeholder="e.g. Relocating to Grand Rapids" className="h-9" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1.5 block">Slug</label>
+                  <Input value={editingPage.slug} onChange={(e) => updateField("slug", e.target.value)} placeholder="auto-generated-from-title" className="h-9" />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">Meta Description <span className="text-muted-foreground font-normal">({editingPage.metaDescription.length}/160)</span></label>
+                <Textarea value={editingPage.metaDescription} onChange={(e) => updateField("metaDescription", e.target.value)} placeholder="155 chars max — include primary keyword and value prop" className="min-h-[60px]" maxLength={160} />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">Category</label>
+                <Select value={editingPage.category} onValueChange={(v) => updateField("category", v as AeoPageCategory)}>
+                  <SelectTrigger className="h-9 w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAGE_CATEGORIES.map((c) => (
+                      <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* H1 */}
+          <Card>
+            <CardHeader><CardTitle className="font-display text-xl">H1 — Primary Question</CardTitle></CardHeader>
+            <CardContent>
+              <Input value={editingPage.h1} onChange={(e) => updateField("h1", e.target.value)} placeholder="e.g. What is it like to live in Grand Rapids, Michigan?" className="h-10 text-base" />
+              <p className="text-xs text-muted-foreground mt-2">The main question this page answers — appears as the page heading.</p>
+            </CardContent>
+          </Card>
+
+          {/* H2 Sub-questions */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="font-display text-xl">H2 — Sub-questions</CardTitle>
+                <Button variant="outline" size="sm" onClick={addH2} className="gap-1"><Plus className="h-3 w-3" /> Add H2</Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {editingPage.h2Questions.map((q, i) => (
+                <div key={i} className="flex gap-2 items-start">
+                  <span className="text-xs text-muted-foreground mt-2.5 w-6 shrink-0">H2.{i + 1}</span>
+                  <Input value={q} onChange={(e) => updateH2(i, e.target.value)} placeholder={`e.g. What are the best neighborhoods in ${market}?`} className="h-9" />
+                  {editingPage.h2Questions.length > 1 && (
+                    <Button variant="ghost" size="sm" onClick={() => removeH2(i)} className="shrink-0 h-9 w-9 p-0 text-muted-foreground hover:text-destructive">
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+              <p className="text-xs text-muted-foreground">Each H2 becomes a content section. Use natural language questions for AEO optimization.</p>
+            </CardContent>
+          </Card>
+
+          {/* Accordion Q&A */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="font-display text-xl">Accordion Q&A (FAQ Schema)</CardTitle>
+                <Button variant="outline" size="sm" onClick={addQA} className="gap-1"><Plus className="h-3 w-3" /> Add Q&A</Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Accordion type="multiple" className="space-y-2">
+                {editingPage.accordionQA.map((qa, i) => (
+                  <AccordionItem key={qa.id} value={qa.id} className="border rounded-md px-3">
+                    <AccordionTrigger className="text-sm py-3">
+                      <span className="text-left flex-1 truncate">{qa.question || `Q&A #${i + 1} — click to edit`}</span>
+                    </AccordionTrigger>
+                    <AccordionContent className="space-y-3 pb-4">
+                      <div>
+                        <label className="text-xs font-medium mb-1 block">Question</label>
+                        <Input value={qa.question} onChange={(e) => updateQA(qa.id, "question", e.target.value)} placeholder="e.g. How much does it cost to live in Grand Rapids?" className="h-8 text-sm" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium mb-1 block">Answer</label>
+                        <Textarea value={qa.answer} onChange={(e) => updateQA(qa.id, "answer", e.target.value)} placeholder="Comprehensive answer — this populates the FAQPage JSON-LD schema" className="min-h-[80px] text-sm" />
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={() => removeQA(qa.id)} className="text-destructive hover:text-destructive text-xs h-7">
+                        <Trash2 className="h-3 w-3 mr-1" /> Remove
+                      </Button>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+              <p className="text-xs text-muted-foreground mt-3">These Q&As generate both the on-page accordion and the FAQPage JSON-LD schema.</p>
+            </CardContent>
+          </Card>
+
+          {/* YouTube */}
+          <Card>
+            <CardHeader><CardTitle className="font-display text-xl">YouTube Video (Optional)</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">YouTube Video ID</label>
+                <Input value={editingPage.youtubeVideoId} onChange={(e) => updateField("youtubeVideoId", e.target.value)} placeholder="e.g. dQw4w9WgXcQ" className="h-9" />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">Transcript</label>
+                <Textarea value={editingPage.youtubeTranscript} onChange={(e) => updateField("youtubeTranscript", e.target.value)} placeholder="Paste video transcript for AEO content reinforcement..." className="min-h-[80px]" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Sidebar: JSON-LD preview / HTML output */}
+        <div className="space-y-6">
+          <Card>
+            <CardHeader><CardTitle className="font-display text-lg">Page Summary</CardTitle></CardHeader>
+            <CardContent className="text-sm space-y-2">
+              <div className="flex justify-between"><span className="text-muted-foreground">Category</span><Badge className={`${categoryCss(editingPage.category)} border-0 text-xs`}>{categoryLabel(editingPage.category)}</Badge></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">H2 sections</span><span className="font-medium">{editingPage.h2Questions.length}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">FAQ items</span><span className="font-medium">{editingPage.accordionQA.length}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Video</span><span className="font-medium">{editingPage.youtubeVideoId ? "Yes" : "No"}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Slug</span><span className="font-mono text-xs truncate max-w-[140px]">/{editingPage.slug || "..."}</span></div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="font-display text-lg">JSON-LD Preview</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <pre className="text-xs bg-muted rounded-md p-3 overflow-auto max-h-[300px] whitespace-pre-wrap font-mono">
+                {JSON.stringify(generateJsonLd(editingPage, agentName, market, socialUrls), null, 2)}
+              </pre>
+            </CardContent>
+          </Card>
+
+          {showHtml && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="font-display text-lg">HTML Output</CardTitle>
+                  <Button variant="ghost" size="sm" onClick={copyHtml} className="gap-1 h-7 text-xs"><Copy className="h-3 w-3" /> Copy</Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <pre className="text-xs bg-muted rounded-md p-3 overflow-auto max-h-[400px] whitespace-pre-wrap font-mono">
+                  {htmlOutput}
+                </pre>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default PageGeneratorTab;
