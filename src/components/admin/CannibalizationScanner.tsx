@@ -38,6 +38,7 @@ const CannibalizationScanner = () => {
   const [result, setResult] = useState<ScanResult | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<Record<string, Suggestion>>({});
+  const [accepted, setAccepted] = useState<Set<number>>(new Set());
 
   const handleScan = async () => {
     const pages = loadPages();
@@ -49,6 +50,7 @@ const CannibalizationScanner = () => {
     setScanning(true);
     setResult(null);
     setSuggestions({});
+    setAccepted(new Set());
 
     try {
       const { data, error } = await supabase.functions.invoke("scan-cannibalization", {
@@ -285,16 +287,41 @@ const CannibalizationScanner = () => {
           </Card>
 
           {/* Duplicate groups */}
-          {result.duplicates.map((group, gi) => (
+          {result.duplicates.map((group, gi) => {
+            if (accepted.has(gi)) {
+              return (
+                <Card key={gi} className="overflow-hidden opacity-60">
+                  <CardContent className="pt-6 flex items-center gap-2 text-sm text-muted-foreground">
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    Accepted: "{group.question}" — marked as OK
+                  </CardContent>
+                </Card>
+              );
+            }
+            return (
             <Card key={gi} className="overflow-hidden">
               <CardHeader className="pb-3">
-                <div className="flex items-center gap-2">
-                  <CardTitle className="font-display text-base">
-                    "{group.question}"
-                  </CardTitle>
-                  <Badge variant="outline" className="text-xs shrink-0">
-                    {group.instances.length} pages
-                  </Badge>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <CardTitle className="font-display text-base truncate">
+                      "{group.question}"
+                    </CardTitle>
+                    <Badge variant="outline" className="text-xs shrink-0">
+                      {group.instances.length} pages
+                    </Badge>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0 gap-1.5"
+                    onClick={() => {
+                      setAccepted((prev) => new Set(prev).add(gi));
+                      toast({ title: "Marked as acceptable" });
+                    }}
+                  >
+                    <CheckCircle className="h-3.5 w-3.5" />
+                    Accept
+                  </Button>
                 </div>
               </CardHeader>
               <CardContent>
@@ -329,7 +356,8 @@ const CannibalizationScanner = () => {
                 </div>
               </CardContent>
             </Card>
-          ))}
+            );
+          })}
         </>
       )}
     </div>
