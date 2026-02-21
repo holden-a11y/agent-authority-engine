@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Settings, FileText, Link2, CheckSquare, LayoutDashboard, Plus, X } from "lucide-react";
-import PageGeneratorTab from "@/components/admin/PageGeneratorTab";
+import CategoryWizard from "@/components/admin/CategoryWizard";
 
 interface EntityConfig {
   agentName: string;
@@ -161,7 +161,7 @@ const Admin = () => {
         <Tabs defaultValue="entity" className="space-y-6">
           <TabsList className="bg-card border border-border">
             <TabsTrigger value="entity" className="gap-1.5"><Settings className="h-3.5 w-3.5" /> Entity Config</TabsTrigger>
-            <TabsTrigger value="pages" className="gap-1.5"><FileText className="h-3.5 w-3.5" /> Page Generator</TabsTrigger>
+            <TabsTrigger value="pages" className="gap-1.5"><FileText className="h-3.5 w-3.5" /> Content Wizard</TabsTrigger>
             <TabsTrigger value="map" className="gap-1.5"><LayoutDashboard className="h-3.5 w-3.5" /> Standardization Map</TabsTrigger>
             <TabsTrigger value="links" className="gap-1.5"><Link2 className="h-3.5 w-3.5" /> Linking Engine</TabsTrigger>
             <TabsTrigger value="qa" className="gap-1.5"><CheckSquare className="h-3.5 w-3.5" /> QA Suite</TabsTrigger>
@@ -413,7 +413,7 @@ const Admin = () => {
 
           {/* Placeholder tabs */}
           <TabsContent value="pages">
-            <PageGeneratorTab
+            <CategoryWizard
               agentName={config.agentName}
               market={config.market}
               socialUrls={[

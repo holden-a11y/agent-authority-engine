@@ -13,9 +13,11 @@ export interface AeoPage {
   category: AeoPageCategory;
   status: AeoPageStatus;
   h1: string;
-  h2Questions: string[]; // kept for backward compat, no longer used in template
+  h2Questions: string[]; // deprecated, kept for backward compat
   accordionQA: AeoQuestion[];
   relatedQuestions: { title: string; slug: string }[];
+  parentSlug?: string;
+  depth?: number; // 0 = parent, 1 = child, 2 = grandchild, etc.
   youtubeVideoId: string;
   youtubeTranscript: string;
   metaDescription: string;
