@@ -27,12 +27,13 @@ const createEmptyPage = (category: AeoPageCategory): AeoPage => ({
   category,
   status: "draft",
   h1: "",
-  h2Questions: ["", "", ""],
-  accordionQA: [
-    { id: crypto.randomUUID(), question: "", answer: "" },
-    { id: crypto.randomUUID(), question: "", answer: "" },
-    { id: crypto.randomUUID(), question: "", answer: "" },
-  ],
+  h2Questions: [],
+  accordionQA: Array.from({ length: 10 }, () => ({
+    id: crypto.randomUUID(),
+    question: "",
+    answer: "",
+  })),
+  relatedQuestions: [],
   youtubeVideoId: "",
   youtubeTranscript: "",
   metaDescription: "",
@@ -152,15 +153,18 @@ const PageGeneratorTab = ({ agentName, market, socialUrls, entityConfig }: PageG
 
       setEditingPage({
         ...editingPage,
-        h2Questions: data.h2Questions || editingPage.h2Questions,
         metaDescription: data.metaDescription || editingPage.metaDescription,
         accordionQA: (data.faqItems || []).map((faq: { question: string; answer: string }) => ({
           id: crypto.randomUUID(),
           question: faq.question,
           answer: faq.answer,
         })),
+        relatedQuestions: (data.relatedQuestions || []).map((rq: any) => ({
+          title: rq.title || rq,
+          slug: generateSlug(rq.title || rq),
+        })),
       });
-      toast({ title: "Content generated!", description: "H2 questions and FAQ items have been populated. Review and edit as needed." });
+      toast({ title: "Content generated!", description: "10 FAQ items and related links have been populated. Review and edit as needed." });
     } catch (e: any) {
       console.error("AI generation error:", e);
       toast({ title: "Generation failed", description: e.message || "Could not generate content. Try again.", variant: "destructive" });
@@ -213,12 +217,16 @@ const PageGeneratorTab = ({ agentName, market, socialUrls, entityConfig }: PageG
           slug: generateSlug(p.title),
           category: p.category,
           status: "draft" as const,
-          h1: p.h1,
-          h2Questions: p.h2Questions || [],
+          h1: p.h1 || p.title,
+          h2Questions: [],
           accordionQA: (p.faqItems || []).map((faq: any) => ({
             id: crypto.randomUUID(),
             question: faq.question,
             answer: faq.answer,
+          })),
+          relatedQuestions: (p.relatedQuestions || []).map((rq: any) => ({
+            title: rq.title || rq,
+            slug: generateSlug(rq.title || rq),
           })),
           youtubeVideoId: "",
           youtubeTranscript: "",
@@ -523,27 +531,45 @@ const PageGeneratorTab = ({ agentName, market, socialUrls, entityConfig }: PageG
             </CardContent>
           </Card>
 
-          {/* H2 Sub-questions */}
+          {/* Related Questions */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="font-display text-xl">H2 — Sub-questions</CardTitle>
-                <Button variant="outline" size="sm" onClick={addH2} className="gap-1"><Plus className="h-3 w-3" /> Add H2</Button>
+                <CardTitle className="font-display text-xl">Related Questions (Sub-page Links)</CardTitle>
+                <Button variant="outline" size="sm" onClick={() => {
+                  const updated = { ...editingPage, relatedQuestions: [...(editingPage.relatedQuestions || []), { title: "", slug: "" }] };
+                  setEditingPage(updated);
+                }} className="gap-1"><Plus className="h-3 w-3" /> Add Link</Button>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              {editingPage.h2Questions.map((q, i) => (
+              {(editingPage.relatedQuestions || []).map((rq, i) => (
                 <div key={i} className="flex gap-2 items-start">
-                  <span className="text-xs text-muted-foreground mt-2.5 w-6 shrink-0">H2.{i + 1}</span>
-                  <Input value={q} onChange={(e) => updateH2(i, e.target.value)} placeholder={`e.g. What are the best neighborhoods in ${market}?`} className="h-9" />
-                  {editingPage.h2Questions.length > 1 && (
-                    <Button variant="ghost" size="sm" onClick={() => removeH2(i)} className="shrink-0 h-9 w-9 p-0 text-muted-foreground hover:text-destructive">
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
+                  <span className="text-xs text-muted-foreground mt-2.5 w-6 shrink-0">{i + 1}</span>
+                  <Input
+                    value={rq.title}
+                    onChange={(e) => {
+                      const updated = [...(editingPage.relatedQuestions || [])];
+                      updated[i] = { title: e.target.value, slug: generateSlug(e.target.value) };
+                      setEditingPage({ ...editingPage, relatedQuestions: updated });
+                    }}
+                    placeholder={`e.g. What Are the Best Neighborhoods in ${market}?`}
+                    className="h-9"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const updated = (editingPage.relatedQuestions || []).filter((_, idx) => idx !== i);
+                      setEditingPage({ ...editingPage, relatedQuestions: updated });
+                    }}
+                    className="shrink-0 h-9 w-9 p-0 text-muted-foreground hover:text-destructive"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
                 </div>
               ))}
-              <p className="text-xs text-muted-foreground">Each H2 becomes a content section. Use natural language questions for AEO optimization.</p>
+              <p className="text-xs text-muted-foreground">Links to related sub-question pages shown at the bottom of this page.</p>
             </CardContent>
           </Card>
 
@@ -604,8 +630,8 @@ const PageGeneratorTab = ({ agentName, market, socialUrls, entityConfig }: PageG
             <CardHeader><CardTitle className="font-display text-lg">Page Summary</CardTitle></CardHeader>
             <CardContent className="text-sm space-y-2">
               <div className="flex justify-between"><span className="text-muted-foreground">Category</span><Badge className={`${categoryCss(editingPage.category)} border-0 text-xs`}>{categoryLabel(editingPage.category)}</Badge></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">H2 sections</span><span className="font-medium">{editingPage.h2Questions.length}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">FAQ items</span><span className="font-medium">{editingPage.accordionQA.length}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Related links</span><span className="font-medium">{(editingPage.relatedQuestions || []).length}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Video</span><span className="font-medium">{editingPage.youtubeVideoId ? "Yes" : "No"}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Slug</span><span className="font-mono text-xs truncate max-w-[140px]">/{editingPage.slug || "..."}</span></div>
             </CardContent>

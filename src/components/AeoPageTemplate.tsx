@@ -4,6 +4,7 @@ import { AeoPage, PAGE_CATEGORIES, generateJsonLd } from "@/lib/aeo-types";
 import { Layout } from "@/components/Layout";
 import { LeadCaptureForm } from "@/components/LeadCaptureForm";
 import { FAIR_HOUSING_DISCLAIMER } from "@/lib/fair-housing";
+import { Link } from "react-router-dom";
 
 interface AeoPageTemplateProps {
   page: AeoPage;
@@ -15,6 +16,7 @@ interface AeoPageTemplateProps {
 const AeoPageTemplate = ({ page, agentName, market, socialUrls }: AeoPageTemplateProps) => {
   const category = PAGE_CATEGORIES.find((c) => c.value === page.category);
   const jsonLd = generateJsonLd(page, agentName, market, socialUrls);
+  const relatedQuestions = page.relatedQuestions || [];
 
   return (
     <Layout>
@@ -45,17 +47,23 @@ const AeoPageTemplate = ({ page, agentName, market, socialUrls }: AeoPageTemplat
             {page.metaDescription || "[Meta description — 155 characters max]"}
           </p>
 
-          {/* H2 Question Sections */}
-          {page.h2Questions.map((q, i) => (
-            <section key={i} className="mb-10">
-              <h2 className="font-display text-xl md:text-2xl font-semibold text-foreground mb-3">
-                {q || `[Sub-question H2 #${i + 1}]`}
-              </h2>
-              <div className="prose prose-sm max-w-none text-muted-foreground">
-                <p>[Content section — answer this question with authority-building copy, local data, and agent positioning.]</p>
-              </div>
+          {/* FAQ Accordion */}
+          {page.accordionQA.length > 0 && (
+            <section className="mb-12">
+              <Accordion type="multiple" className="border rounded-lg divide-y">
+                {page.accordionQA.map((qa) => (
+                  <AccordionItem key={qa.id} value={qa.id} className="border-0 px-4">
+                    <AccordionTrigger className="text-left text-sm md:text-base font-medium">
+                      {qa.question || "[FAQ question]"}
+                    </AccordionTrigger>
+                    <AccordionContent className="text-muted-foreground leading-relaxed">
+                      {qa.answer || "[FAQ answer — write a comprehensive, authoritative response.]"}
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
             </section>
-          ))}
+          )}
 
           {/* YouTube embed */}
           {page.youtubeVideoId && (
@@ -81,24 +89,26 @@ const AeoPageTemplate = ({ page, agentName, market, socialUrls }: AeoPageTemplat
             </section>
           )}
 
-          {/* Accordion Q&A */}
-          {page.accordionQA.length > 0 && (
+          {/* Related Questions */}
+          {relatedQuestions.length > 0 && (
             <section className="mb-12">
               <h2 className="font-display text-xl md:text-2xl font-semibold text-foreground mb-4">
-                Frequently Asked Questions
+                Related Questions
               </h2>
-              <Accordion type="multiple" className="border rounded-lg divide-y">
-                {page.accordionQA.map((qa) => (
-                  <AccordionItem key={qa.id} value={qa.id} className="border-0 px-4">
-                    <AccordionTrigger className="text-left text-sm md:text-base">
-                      {qa.question || "[FAQ question]"}
-                    </AccordionTrigger>
-                    <AccordionContent className="text-muted-foreground">
-                      {qa.answer || "[FAQ answer — write a comprehensive, authoritative response.]"}
-                    </AccordionContent>
-                  </AccordionItem>
+              <div className="grid gap-2">
+                {relatedQuestions.map((rq, i) => (
+                  <Link
+                    key={i}
+                    to={`/pages/${rq.slug}`}
+                    className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/40 hover:bg-primary/5 transition-colors group"
+                  >
+                    <span className="text-primary font-bold text-lg">→</span>
+                    <span className="text-sm md:text-base font-medium group-hover:text-primary transition-colors">
+                      {rq.title}
+                    </span>
+                  </Link>
                 ))}
-              </Accordion>
+              </div>
             </section>
           )}
 
