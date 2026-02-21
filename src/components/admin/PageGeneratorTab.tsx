@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,6 +40,7 @@ const createEmptyPage = (category: AeoPageCategory): AeoPage => ({
 });
 
 const PageGeneratorTab = ({ agentName, market, socialUrls, entityConfig }: PageGeneratorTabProps) => {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [pages, setPages] = useState<AeoPage[]>(() => {
     const saved = localStorage.getItem("aeo-pages");
@@ -343,7 +345,7 @@ const PageGeneratorTab = ({ agentName, market, socialUrls, entityConfig }: PageG
                       variant="ghost"
                       size="sm"
                       className="h-6 text-xs gap-1 shrink-0"
-                      onClick={() => window.open(`/pages/${entry.slug}`, "_blank")}
+                      onClick={() => navigate(`/pages/${entry.slug}`)}
                     >
                       <Eye className="h-3 w-3" /> Preview
                     </Button>
@@ -384,7 +386,7 @@ const PageGeneratorTab = ({ agentName, market, socialUrls, entityConfig }: PageG
                         <Button variant="ghost" size="sm" onClick={() => { setEditingPage(p); setShowHtml(false); }} className="h-7 gap-1 text-xs">
                           <FileText className="h-3 w-3" /> Edit
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => window.open(`/pages/${p.slug}`, "_blank")} className="h-7 gap-1 text-xs">
+                        <Button variant="ghost" size="sm" onClick={() => navigate(`/pages/${p.slug}`)} className="h-7 gap-1 text-xs">
                           <Eye className="h-3 w-3" /> View
                         </Button>
                         <Button variant="ghost" size="sm" onClick={() => deletePage(p.id)} className="h-7 text-destructive hover:text-destructive">
