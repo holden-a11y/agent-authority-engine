@@ -43,12 +43,12 @@ const defaultConfig: EntityConfig = {
   voiceToneNotes: "",
   fubWebhookUrl: "",
   googleBusinessProfile: "",
-  facebookUrl: "",
-  instagramUrl: "",
-  linkedinUrl: "",
-  youtubeUrl: "",
-  xUrl: "",
-  tiktokUrl: "",
+  facebookUrl: "https://www.facebook.com/profile.php?id=61585877413251",
+  instagramUrl: "https://www.instagram.com/holdengr.re",
+  linkedinUrl: "https://www.linkedin.com/in/holdenrichardson",
+  youtubeUrl: "https://youtube.com/@holdengr.michigan",
+  xUrl: "https://x.com/realholdengr",
+  tiktokUrl: "https://www.tiktok.com/@realholdengr.re",
 };
 
 const pageCategories = [
