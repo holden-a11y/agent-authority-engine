@@ -6,10 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Plus, X, Copy, Eye, Code, FileText, Trash2, AlertTriangle, ShieldCheck } from "lucide-react";
+import { Plus, X, Copy, Eye, Code, FileText, Trash2, AlertTriangle, ShieldCheck, Sparkles, Loader2 } from "lucide-react";
 import { AeoPage, AeoPageCategory, AeoQuestion, PAGE_CATEGORIES, generateSlug, generatePageHtml, generateJsonLd } from "@/lib/aeo-types";
 import { useToast } from "@/hooks/use-toast";
 import { scanForFairHousingViolations, FairHousingFlag, FAIR_HOUSING_SHORT } from "@/lib/fair-housing";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PageGeneratorTabProps {
   agentName: string;
@@ -44,6 +45,7 @@ const PageGeneratorTab = ({ agentName, market, socialUrls }: PageGeneratorTabPro
   const [editingPage, setEditingPage] = useState<AeoPage | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<AeoPageCategory>("buying-guides");
   const [showHtml, setShowHtml] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const savePages = (updated: AeoPage[]) => {
     setPages(updated);
@@ -117,6 +119,45 @@ const PageGeneratorTab = ({ agentName, market, socialUrls }: PageGeneratorTabPro
       ...editingPage,
       accordionQA: editingPage.accordionQA.filter((qa) => qa.id !== id),
     });
+  };
+
+  const generateWithAI = async () => {
+    if (!editingPage) return;
+    if (!editingPage.title && !editingPage.h1) {
+      toast({ title: "Enter a title or H1 first", description: "The AI needs at least a page title or H1 question to generate content.", variant: "destructive" });
+      return;
+    }
+    setIsGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-aeo-content", {
+        body: {
+          title: editingPage.title,
+          category: editingPage.category,
+          h1: editingPage.h1 || editingPage.title,
+          market,
+          agentName,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      setEditingPage({
+        ...editingPage,
+        h2Questions: data.h2Questions || editingPage.h2Questions,
+        metaDescription: data.metaDescription || editingPage.metaDescription,
+        accordionQA: (data.faqItems || []).map((faq: { question: string; answer: string }) => ({
+          id: crypto.randomUUID(),
+          question: faq.question,
+          answer: faq.answer,
+        })),
+      });
+      toast({ title: "Content generated!", description: "H2 questions and FAQ items have been populated. Review and edit as needed." });
+    } catch (e: any) {
+      console.error("AI generation error:", e);
+      toast({ title: "Generation failed", description: e.message || "Could not generate content. Try again.", variant: "destructive" });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const copyHtml = () => {
@@ -235,7 +276,11 @@ const PageGeneratorTab = ({ agentName, market, socialUrls }: PageGeneratorTabPro
           <Button variant="ghost" size="sm" onClick={() => setEditingPage(null)}>← Back</Button>
           <Badge className={`${categoryCss(editingPage.category)} border-0`}>{categoryLabel(editingPage.category)}</Badge>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={generateWithAI} disabled={isGenerating} className="gap-1.5">
+            {isGenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+            {isGenerating ? "Generating..." : "AI Generate Q&A"}
+          </Button>
           <Button variant="outline" size="sm" onClick={() => setShowHtml(!showHtml)} className="gap-1.5">
             <Code className="h-3.5 w-3.5" /> {showHtml ? "Hide HTML" : "View HTML"}
           </Button>
