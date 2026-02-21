@@ -14,7 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      sitemap_cache: {
+        Row: {
+          id: number
+          updated_at: string
+          xml_content: string
+        }
+        Insert: {
+          id?: number
+          updated_at?: string
+          xml_content?: string
+        }
+        Update: {
+          id?: number
+          updated_at?: string
+          xml_content?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

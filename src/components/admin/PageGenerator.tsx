@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { scanForFairHousingViolations, FairHousingFlag } from "@/lib/fair-housing";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { regenerateSitemap } from "@/lib/sitemap";
 
 interface PageGeneratorProps {
   agentName: string;
@@ -149,6 +150,7 @@ const PageGenerator = ({ agentName, market, socialUrls, entityConfig }: PageGene
     savePages(updated);
     setStep("done");
     toast({ title: "Page created!", description: `/${selectedCategory}/${finalPage.slug}` });
+    regenerateSitemap();
   };
 
   // ── Delete existing page ──
@@ -157,6 +159,7 @@ const PageGenerator = ({ agentName, market, socialUrls, entityConfig }: PageGene
     setPages(updated);
     savePages(updated);
     toast({ title: "Page deleted" });
+    regenerateSitemap();
   };
 
   // ── Reset ──
