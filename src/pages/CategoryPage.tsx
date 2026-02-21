@@ -13,7 +13,7 @@ const CategoryPage = () => {
 
   if (!cat) return <NotFound />;
 
-  const pages = loadPages().filter((p) => p.categorySlug === category);
+  const pages = loadPages().filter((p) => p.categorySlug === category && !p.parentId);
   const config = JSON.parse(localStorage.getItem("aeo-entity-config") || "{}");
   const agentName = config.agentName || "Agent";
   const market = config.market || "";

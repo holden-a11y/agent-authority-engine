@@ -1,13 +1,13 @@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AeoPage, loadCategories, generateJsonLd } from "@/lib/aeo-types";
+import { AeoPage, loadCategories, loadPages, generateJsonLd } from "@/lib/aeo-types";
 import { Layout } from "@/components/Layout";
 import { LeadCaptureForm } from "@/components/LeadCaptureForm";
 import { FAIR_HOUSING_DISCLAIMER } from "@/lib/fair-housing";
 import { getCoverImage } from "@/lib/cover-images";
 import { Link } from "react-router-dom";
-import { Calendar, Phone, MessageSquare, ArrowLeft } from "lucide-react";
+import { Calendar, Phone, MessageSquare, ArrowLeft, ChevronRight } from "lucide-react";
 
 interface AeoPageTemplateProps {
   page: AeoPage;
@@ -18,7 +18,10 @@ interface AeoPageTemplateProps {
 
 const AeoPageTemplate = ({ page, agentName, market, socialUrls }: AeoPageTemplateProps) => {
   const categories = loadCategories();
+  const allPages = loadPages();
   const category = categories.find((c) => c.slug === page.categorySlug);
+  const parentPage = page.parentId ? allPages.find((p) => p.id === page.parentId) : null;
+  const childPages = allPages.filter((p) => p.parentId === page.id);
   const jsonLd = generateJsonLd(page, agentName, market, socialUrls);
   const coverImage = getCoverImage(page.slug);
 
@@ -35,10 +38,18 @@ const AeoPageTemplate = ({ page, agentName, market, socialUrls }: AeoPageTemplat
         <div className="absolute inset-0 flex items-end">
           <div className="container-narrow px-4 pb-8 md:pb-12 w-full">
             {category && (
-              <nav className="flex items-center gap-1.5 text-sm text-primary-foreground/70 mb-3">
+              <nav className="flex items-center gap-1.5 text-sm text-primary-foreground/70 mb-3 flex-wrap">
                 <Link to={`/${category.slug}`} className="hover:text-primary-foreground transition-colors">
                   {category.label}
                 </Link>
+                {parentPage && (
+                  <>
+                    <span>/</span>
+                    <Link to={`/${category.slug}/${parentPage.slug}`} className="hover:text-primary-foreground transition-colors">
+                      {parentPage.title}
+                    </Link>
+                  </>
+                )}
                 <span>/</span>
                 <span className="text-primary-foreground font-medium truncate">{page.title}</span>
               </nav>
@@ -98,6 +109,25 @@ const AeoPageTemplate = ({ page, agentName, market, socialUrls }: AeoPageTemplat
                 ))}
               </Accordion>
             </section>
+           )}
+
+          {/* Child pages */}
+          {childPages.length > 0 && (
+            <section className="mb-12">
+              <h2 className="font-display text-lg font-semibold mb-3">Related Topics</h2>
+              <div className="grid gap-2">
+                {childPages.map((child) => (
+                  <Link
+                    key={child.id}
+                    to={`/${page.categorySlug}/${child.slug}`}
+                    className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-accent/40 hover:bg-accent/5 transition-colors group"
+                  >
+                    <ChevronRight className="h-4 w-4 text-accent shrink-0" />
+                    <span className="text-sm font-medium group-hover:text-accent transition-colors">{child.title}</span>
+                  </Link>
+                ))}
+              </div>
+            </section>
           )}
 
           {/* YouTube embed */}
@@ -124,8 +154,17 @@ const AeoPageTemplate = ({ page, agentName, market, socialUrls }: AeoPageTemplat
             </section>
           )}
 
-          {/* Back to category */}
-          <section className="mb-8">
+          {/* Back navigation */}
+          <section className="mb-8 flex flex-wrap gap-4">
+            {parentPage && category && (
+              <Link
+                to={`/${category.slug}/${parentPage.slug}`}
+                className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-accent transition-colors"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to {parentPage.title}
+              </Link>
+            )}
             <Link
               to={category ? `/${category.slug}` : "/"}
               className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-accent transition-colors"

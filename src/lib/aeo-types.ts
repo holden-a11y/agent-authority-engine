@@ -26,6 +26,7 @@ export interface AeoPage {
   title: string;        // the question
   slug: string;          // derived from the question
   categorySlug: string;  // which nav category this lives under
+  parentId?: string;     // if set, this is a child of another page
   status: AeoPageStatus;
   h1: string;            // same as title (the question)
   accordionQA: AeoQuestion[];
