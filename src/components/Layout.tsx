@@ -2,18 +2,26 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, X, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { loadCategories } from "@/lib/aeo-types";
 
-const navLinks = [
+const staticLinks = [
   { label: "Home", to: "/" },
   { label: "About", to: "/about" },
-  { label: "Neighborhoods", to: "/neighborhoods" },
-  { label: "Blog", to: "/blog" },
   { label: "Contact", to: "/contact" },
 ];
 
 export function Header() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
+  const categories = loadCategories();
+
+  // Build nav: Home, category pages, About, Contact
+  const navLinks = [
+    { label: "Home", to: "/" },
+    ...categories.map((c) => ({ label: c.label, to: `/${c.slug}` })),
+    { label: "About", to: "/about" },
+    { label: "Contact", to: "/contact" },
+  ];
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
@@ -28,7 +36,7 @@ export function Header() {
             <Link
               key={l.to}
               to={l.to}
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+              className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                 location.pathname === l.to
                   ? "text-accent-foreground bg-accent/10"
                   : "text-muted-foreground hover:text-foreground"
@@ -75,6 +83,14 @@ export function Header() {
 }
 
 export function Footer() {
+  const categories = loadCategories();
+  const footerLinks = [
+    { label: "Home", to: "/" },
+    ...categories.map((c) => ({ label: c.label, to: `/${c.slug}` })),
+    { label: "About", to: "/about" },
+    { label: "Contact", to: "/contact" },
+  ];
+
   return (
     <footer className="bg-navy-gradient text-primary-foreground">
       <div className="container-wide section-padding">
@@ -90,7 +106,7 @@ export function Footer() {
           <div>
             <h4 className="font-display text-sm font-semibold uppercase tracking-wider mb-4 text-gold">Quick Links</h4>
             <div className="space-y-2">
-              {navLinks.map((l) => (
+              {footerLinks.map((l) => (
                 <Link key={l.to} to={l.to} className="block text-sm text-primary-foreground/70 hover:text-gold transition-colors">
                   {l.label}
                 </Link>

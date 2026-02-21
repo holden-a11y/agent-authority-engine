@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Settings, FileText, Link2, CheckSquare, LayoutDashboard, Plus, X } from "lucide-react";
-import CategoryWizard from "@/components/admin/CategoryWizard";
+import PageGenerator from "@/components/admin/PageGenerator";
 
 interface EntityConfig {
   agentName: string;
@@ -413,7 +413,7 @@ const Admin = () => {
 
           {/* Placeholder tabs */}
           <TabsContent value="pages">
-            <CategoryWizard
+            <PageGenerator
               agentName={config.agentName}
               market={config.market}
               socialUrls={[

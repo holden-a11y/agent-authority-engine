@@ -1,13 +1,13 @@
 import { useParams } from "react-router-dom";
-import { AeoPage } from "@/lib/aeo-types";
+import { AeoPage, loadPages } from "@/lib/aeo-types";
 import AeoPageTemplate from "@/components/AeoPageTemplate";
 import NotFound from "./NotFound";
 
 const AeoPageView = () => {
-  const { slug } = useParams<{ slug: string }>();
+  const { category, slug } = useParams<{ category: string; slug: string }>();
 
-  const pages: AeoPage[] = JSON.parse(localStorage.getItem("aeo-pages") || "[]");
-  const page = pages.find((p) => p.slug === slug);
+  const pages = loadPages();
+  const page = pages.find((p) => p.slug === slug && p.categorySlug === category);
 
   if (!page) return <NotFound />;
 

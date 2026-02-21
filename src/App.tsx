@@ -10,6 +10,7 @@ import Blog from "./pages/Blog";
 import Contact from "./pages/Contact";
 import Admin from "./pages/Admin";
 import AeoPageView from "./pages/AeoPageView";
+import CategoryPage from "./pages/CategoryPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,7 +28,8 @@ const App = () => (
           <Route path="/blog" element={<Blog />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/admin" element={<Admin />} />
-          <Route path="/pages/:slug" element={<AeoPageView />} />
+          <Route path="/:category/:slug" element={<AeoPageView />} />
+          <Route path="/:category" element={<CategoryPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
