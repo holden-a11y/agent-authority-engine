@@ -3,6 +3,7 @@ import { Layout } from "@/components/Layout";
 import { loadPages, loadCategories } from "@/lib/aeo-types";
 import { LeadCaptureForm } from "@/components/LeadCaptureForm";
 import { FAIR_HOUSING_DISCLAIMER } from "@/lib/fair-housing";
+import { getCoverImage } from "@/lib/cover-images";
 import NotFound from "./NotFound";
 
 const CategoryPage = () => {
@@ -16,18 +17,28 @@ const CategoryPage = () => {
   const config = JSON.parse(localStorage.getItem("aeo-entity-config") || "{}");
   const agentName = config.agentName || "Agent";
   const market = config.market || "";
+  const coverImage = getCoverImage(category || "default");
 
   return (
     <Layout>
+      {/* Hero cover */}
+      <div className="relative h-64 md:h-80 overflow-hidden">
+        <img src={coverImage} alt="" className="w-full h-full object-cover" />
+        <div className="absolute inset-0 hero-overlay" />
+        <div className="absolute inset-0 flex items-end">
+          <div className="container-narrow px-4 pb-8 md:pb-12 w-full">
+            <h1 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold text-primary-foreground leading-tight">
+              {cat.label}
+            </h1>
+            <p className="text-primary-foreground/70 text-lg mt-2 max-w-2xl">
+              Explore our {cat.label.toLowerCase()} resources for {market || "your area"}.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <article className="section-padding">
         <div className="container-narrow">
-          <h1 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4 leading-tight">
-            {cat.label}
-          </h1>
-          <p className="text-muted-foreground text-lg mb-10 max-w-2xl">
-            Explore our {cat.label.toLowerCase()} resources for {market || "your area"}.
-          </p>
-
           {pages.length === 0 ? (
             <p className="text-muted-foreground">No pages in this category yet.</p>
           ) : (
@@ -36,15 +47,19 @@ const CategoryPage = () => {
                 <Link
                   key={p.id}
                   to={`/${category}/${p.slug}`}
-                  className="flex items-center gap-3 p-4 rounded-lg border border-border hover:border-primary/40 hover:bg-primary/5 transition-colors group"
+                  className="flex items-center gap-4 p-4 rounded-lg border border-border hover:border-accent/40 hover:bg-accent/5 transition-colors group"
                 >
-                  <span className="text-primary font-bold text-lg">→</span>
+                  <img
+                    src={getCoverImage(p.slug)}
+                    alt=""
+                    className="w-16 h-16 rounded-md object-cover shrink-0 hidden sm:block"
+                  />
                   <div className="min-w-0">
-                    <span className="text-sm md:text-base font-medium group-hover:text-primary transition-colors block">
+                    <span className="text-sm md:text-base font-semibold group-hover:text-accent transition-colors block">
                       {p.title}
                     </span>
                     {p.metaDescription && (
-                      <span className="text-xs text-muted-foreground line-clamp-1">{p.metaDescription}</span>
+                      <span className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{p.metaDescription}</span>
                     )}
                   </div>
                 </Link>
