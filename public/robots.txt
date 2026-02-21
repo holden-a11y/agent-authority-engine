@@ -12,3 +12,5 @@ Allow: /
 
 User-agent: *
 Allow: /
+
+Sitemap: https://zkwnxmioplufsrzzoaeo.supabase.co/functions/v1/sitemap
