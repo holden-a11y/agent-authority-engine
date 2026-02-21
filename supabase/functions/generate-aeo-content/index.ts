@@ -87,11 +87,17 @@ ${entityConfig?.schoolDistricts?.length ? `- School districts: ${entityConfig.sc
     // ── Mode: generate full page content ──
     const parentContext = parentTitle ? `\nThis is a CHILD page under the parent: "${parentTitle}". The FAQs should focus on the specific sub-topic, not repeat the parent's broad scope.` : "";
 
+    // Build list of existing questions to avoid
+    const existingQuestions: string[] = body.existingQuestions || [];
+    const existingBlock = existingQuestions.length > 0
+      ? `\n\nCRITICAL — DUPLICATE AVOIDANCE:\nThe following questions ALREADY EXIST across other pages. You MUST NOT create any question that is the same or nearly identical to any of these. Every question you generate must be clearly distinct from all of them.\n\nExisting questions:\n${existingQuestions.map((q: string, i: number) => `${i + 1}. ${q}`).join("\n")}`
+      : "";
+
     const systemPrompt = `You are an expert real estate AEO content strategist for "${agentName}" in ${market}.
 
 FAIR HOUSING: Never express preference based on race, color, religion, sex, handicap, familial status, or national origin. Use "primary bedroom" not "master bedroom". Focus on property features and market data.
 
-Generate exactly 10 FAQ question-answer pairs for this page. Each answer must be 2-4 sentences, authoritative, and include local specifics where possible.${parentContext}`;
+Generate UP TO 10 FAQ question-answer pairs for this page. Each answer must be 2-4 sentences, authoritative, and include local specifics where possible. If you cannot create 10 UNIQUE questions that don't duplicate the existing questions list, generate FEWER — only as many as you can make truly unique. Quality and uniqueness over quantity.${parentContext}${existingBlock}`;
 
     const userPrompt = `Generate 10 FAQ Q&A pairs for this AEO page:
 
@@ -131,7 +137,7 @@ ${entityConfig?.targetNeighborhoods?.length ? `Neighborhoods: ${entityConfig.tar
                     required: ["question", "answer"],
                     additionalProperties: false,
                   },
-                  description: "Exactly 10 FAQ Q&A pairs",
+                  description: "Up to 10 unique FAQ Q&A pairs (fewer is OK if duplicates would occur)",
                 },
               },
               required: ["metaDescription", "faqItems"],

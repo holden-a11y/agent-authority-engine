@@ -49,8 +49,13 @@ const PageGenerator = ({ agentName, market, socialUrls, entityConfig }: PageGene
     }
     setIsGenerating(true);
     try {
+      // Collect all existing questions across all pages to avoid duplicates
+      const allExistingQuestions = pages.flatMap((p) =>
+        p.accordionQA.map((qa) => qa.question)
+      );
+
       const { data, error } = await supabase.functions.invoke("generate-aeo-content", {
-        body: { title: question, h1: question, market, agentName, entityConfig },
+        body: { title: question, h1: question, market, agentName, entityConfig, existingQuestions: allExistingQuestions },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -178,7 +183,7 @@ const PageGenerator = ({ agentName, market, socialUrls, entityConfig }: PageGene
       <div>
         <h2 className="font-display text-2xl font-bold">Page Generator</h2>
         <p className="text-muted-foreground text-sm mt-1">
-          Enter a question, generate 10 FAQ sub-questions, assign a category, and publish.
+          Enter a question, generate unique FAQ sub-questions (duplicates across pages are automatically avoided), assign a category, and publish.
         </p>
       </div>
 
@@ -201,7 +206,7 @@ const PageGenerator = ({ agentName, market, socialUrls, entityConfig }: PageGene
             </div>
             <Button variant="gold" onClick={handleGenerate} disabled={isGenerating} className="gap-1.5">
               {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              Generate 10 FAQs
+              Generate Unique FAQs
             </Button>
           </CardContent>
         </Card>
