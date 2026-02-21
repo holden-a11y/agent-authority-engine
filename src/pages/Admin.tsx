@@ -87,7 +87,7 @@ const pageCategories = [
   { name: "Niche: School Districts", count: 25, color: "bg-teal-100 text-teal-800" },
 ];
 
-function TagInput({ label, values, onChange, placeholder }: { label: string; values: string[]; onChange: (v: string[]) => void; placeholder: string }) {
+function TagInput({ label, values = [], onChange, placeholder }: { label: string; values: string[]; onChange: (v: string[]) => void; placeholder: string }) {
   const [input, setInput] = useState("");
   const add = () => {
     if (input.trim() && !values.includes(input.trim())) {
