@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Settings, FileText, Link2, CheckSquare, LayoutDashboard, Plus, X } from "lucide-react";
+import PageGeneratorTab from "@/components/admin/PageGeneratorTab";
 
 interface EntityConfig {
   agentName: string;
@@ -297,14 +298,19 @@ const Admin = () => {
 
           {/* Placeholder tabs */}
           <TabsContent value="pages">
-            <Card className="p-12 text-center">
-              <FileText className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
-              <h3 className="font-display text-xl font-semibold mb-2">Page Generator</h3>
-              <p className="text-muted-foreground text-sm max-w-md mx-auto">
-                Generate AEO-optimized pages with JSON-LD schema, internal linking, and agent authority positioning. Configure entity first, then generate pages by category.
-              </p>
-              <Button variant="gold" className="mt-6" disabled>Coming Next →</Button>
-            </Card>
+            <PageGeneratorTab
+              agentName={config.agentName}
+              market={config.market}
+              socialUrls={[
+                config.googleBusinessProfile,
+                config.facebookUrl,
+                config.instagramUrl,
+                config.linkedinUrl,
+                config.youtubeUrl,
+                config.xUrl,
+                config.tiktokUrl,
+              ].filter(Boolean)}
+            />
           </TabsContent>
 
           <TabsContent value="map">
