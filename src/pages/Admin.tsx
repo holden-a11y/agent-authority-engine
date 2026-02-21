@@ -27,6 +27,19 @@ interface EntityConfig {
   youtubeUrl: string;
   xUrl: string;
   tiktokUrl: string;
+  // New expanded fields
+  usps: string[];
+  certifications: string[];
+  yearsExperience: string;
+  clientPersonas: string[];
+  localKnowledge: string;
+  recentStats: string;
+  avgPriceRange: string;
+  avgDaysOnMarket: string;
+  closedNeighborhoods: string[];
+  marketNuances: string;
+  competitiveLandscape: string;
+  currentChallenges: string;
 }
 
 const defaultConfig: EntityConfig = {
@@ -49,6 +62,18 @@ const defaultConfig: EntityConfig = {
   youtubeUrl: "https://youtube.com/@holdengr.michigan",
   xUrl: "https://x.com/realholdengr",
   tiktokUrl: "https://www.tiktok.com/@realholdengr.re",
+  usps: [],
+  certifications: [],
+  yearsExperience: "",
+  clientPersonas: [],
+  localKnowledge: "",
+  recentStats: "",
+  avgPriceRange: "",
+  avgDaysOnMarket: "",
+  closedNeighborhoods: [],
+  marketNuances: "",
+  competitiveLandscape: "",
+  currentChallenges: "",
 };
 
 const pageCategories = [
@@ -230,6 +255,93 @@ const Admin = () => {
                 </Card>
 
                 <Card>
+                  <CardHeader><CardTitle className="font-display text-xl">Unique Selling Propositions</CardTitle></CardHeader>
+                  <CardContent className="space-y-5">
+                    <TagInput label="USPs / Differentiators" values={config.usps} onChange={(v) => update("usps", v)} placeholder="e.g. Relocation specialist, Negotiation expert" />
+                    <TagInput label="Certifications & Awards" values={config.certifications} onChange={(v) => update("certifications", v)} placeholder="e.g. CRS, ABR, Top Producer 2024" />
+                    <div>
+                      <label className="text-sm font-medium mb-1.5 block">Years of Experience</label>
+                      <Input value={config.yearsExperience} onChange={(e) => update("yearsExperience", e.target.value)} placeholder="e.g. 8" className="h-9" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader><CardTitle className="font-display text-xl">Client Personas</CardTitle></CardHeader>
+                  <CardContent>
+                    <TagInput label="Who You Serve" values={config.clientPersonas} onChange={(v) => update("clientPersonas", v)} placeholder="e.g. Relocating families, First-time buyers, Downsizers" />
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader><CardTitle className="font-display text-xl">Local Knowledge & Market Intel</CardTitle></CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium mb-1.5 block">Local Knowledge Nuggets</label>
+                      <textarea
+                        value={config.localKnowledge}
+                        onChange={(e) => update("localKnowledge", e.target.value)}
+                        placeholder="Favorite restaurants, hidden gems, commute tips, lifestyle details only a local would know..."
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[100px] focus:outline-none focus:ring-2 focus:ring-ring"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1.5 block">Market Nuances — What's happening right now?</label>
+                      <textarea
+                        value={config.marketNuances}
+                        onChange={(e) => update("marketNuances", e.target.value)}
+                        placeholder="What's going on in your market right now? New developments, trends, shifting demand..."
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[100px] focus:outline-none focus:ring-2 focus:ring-ring"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1.5 block">Competitive Landscape</label>
+                      <textarea
+                        value={config.competitiveLandscape}
+                        onChange={(e) => update("competitiveLandscape", e.target.value)}
+                        placeholder="Who are your main competitors? What makes the market competitive? Multiple offer situations?"
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px] focus:outline-none focus:ring-2 focus:ring-ring"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1.5 block">Current Challenges</label>
+                      <textarea
+                        value={config.currentChallenges}
+                        onChange={(e) => update("currentChallenges", e.target.value)}
+                        placeholder="Inventory shortages, interest rate concerns, appraisal gaps..."
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px] focus:outline-none focus:ring-2 focus:ring-ring"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader><CardTitle className="font-display text-xl">Recent Transactions & Stats</CardTitle></CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium mb-1.5 block">Avg Price Range</label>
+                        <Input value={config.avgPriceRange} onChange={(e) => update("avgPriceRange", e.target.value)} placeholder="e.g. $250K - $550K" className="h-9" />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-1.5 block">Avg Days on Market</label>
+                        <Input value={config.avgDaysOnMarket} onChange={(e) => update("avgDaysOnMarket", e.target.value)} placeholder="e.g. 14 days" className="h-9" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1.5 block">Recent Stats / Achievements</label>
+                      <textarea
+                        value={config.recentStats}
+                        onChange={(e) => update("recentStats", e.target.value)}
+                        placeholder="e.g. 47 homes closed in 2024, $18M in volume, 98% list-to-sale price ratio..."
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px] focus:outline-none focus:ring-2 focus:ring-ring"
+                      />
+                    </div>
+                    <TagInput label="Neighborhoods You've Closed In" values={config.closedNeighborhoods} onChange={(v) => update("closedNeighborhoods", v)} placeholder="Add neighborhood" />
+                  </CardContent>
+                </Card>
+
+                <Card>
                   <CardHeader><CardTitle className="font-display text-xl">Agent Voice</CardTitle></CardHeader>
                   <CardContent className="space-y-4">
                     <div>
@@ -313,6 +425,7 @@ const Admin = () => {
                 config.xUrl,
                 config.tiktokUrl,
               ].filter(Boolean)}
+              entityConfig={config}
             />
           </TabsContent>
 

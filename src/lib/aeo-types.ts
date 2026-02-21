@@ -4,11 +4,14 @@ export interface AeoQuestion {
   answer: string;
 }
 
+export type AeoPageStatus = "draft" | "published";
+
 export interface AeoPage {
   id: string;
   title: string;
   slug: string;
   category: AeoPageCategory;
+  status: AeoPageStatus;
   h1: string;
   h2Questions: string[];
   accordionQA: AeoQuestion[];
