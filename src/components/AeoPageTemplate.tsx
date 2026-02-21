@@ -1,11 +1,13 @@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { AeoPage, loadCategories, generateJsonLd } from "@/lib/aeo-types";
 import { Layout } from "@/components/Layout";
 import { LeadCaptureForm } from "@/components/LeadCaptureForm";
 import { FAIR_HOUSING_DISCLAIMER } from "@/lib/fair-housing";
 import { getCoverImage } from "@/lib/cover-images";
 import { Link } from "react-router-dom";
+import { Calendar, Phone, MessageSquare, ArrowLeft } from "lucide-react";
 
 interface AeoPageTemplateProps {
   page: AeoPage;
@@ -58,6 +60,28 @@ const AeoPageTemplate = ({ page, agentName, market, socialUrls }: AeoPageTemplat
             {page.metaDescription || "[Meta description — 155 characters max]"}
           </p>
 
+          {/* Quick Action Buttons */}
+          <div className="flex flex-wrap gap-3 mb-10">
+            <LeadCaptureForm
+              title="Book a Consultation"
+              trigger={
+                <Button variant="gold" size="lg">
+                  <Calendar className="h-4 w-4 mr-2" /> Book a Consult
+                </Button>
+              }
+            />
+            <Button variant="outline" size="lg" asChild>
+              <a href="tel:+16165550123">
+                <Phone className="h-4 w-4 mr-2" /> Call Holden
+              </a>
+            </Button>
+            <Button variant="outline" size="lg" asChild>
+              <a href="sms:+16165550123">
+                <MessageSquare className="h-4 w-4 mr-2" /> Text Holden
+              </a>
+            </Button>
+          </div>
+
           {/* FAQ Accordion */}
           {page.accordionQA.length > 0 && (
             <section className="mb-12">
@@ -101,16 +125,15 @@ const AeoPageTemplate = ({ page, agentName, market, socialUrls }: AeoPageTemplat
           )}
 
           {/* Back to category */}
-          {category && (
-            <section className="mb-8">
-              <Link
-                to={`/${category.slug}`}
-                className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-accent transition-colors"
-              >
-                ← Back to {category.label}
-              </Link>
-            </section>
-          )}
+          <section className="mb-8">
+            <Link
+              to={category ? `/${category.slug}` : "/"}
+              className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-accent transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to {category ? category.label : "Home"}
+            </Link>
+          </section>
 
           {/* CTA */}
           <section className="bg-primary rounded-xl p-8 md:p-12 text-primary-foreground">
