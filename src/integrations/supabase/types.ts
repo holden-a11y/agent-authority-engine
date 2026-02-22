@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      site_backups: {
+        Row: {
+          backup_data: Json
+          backup_type: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          backup_data?: Json
+          backup_type?: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          backup_data?: Json
+          backup_type?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: []
+      }
       sitemap_cache: {
         Row: {
           id: number
