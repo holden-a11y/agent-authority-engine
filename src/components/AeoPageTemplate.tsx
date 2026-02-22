@@ -1,7 +1,8 @@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AeoPage, loadCategories, loadPages, generateJsonLd } from "@/lib/aeo-types";
+import { AeoPage, generateJsonLd } from "@/lib/aeo-types";
+import { usePages, useCategories } from "@/hooks/use-aeo-data";
 import { Layout } from "@/components/Layout";
 import { LeadCaptureForm } from "@/components/LeadCaptureForm";
 import { FAIR_HOUSING_DISCLAIMER } from "@/lib/fair-housing";
@@ -17,8 +18,8 @@ interface AeoPageTemplateProps {
 }
 
 const AeoPageTemplate = ({ page, agentName, market, socialUrls }: AeoPageTemplateProps) => {
-  const categories = loadCategories();
-  const allPages = loadPages();
+  const { data: categories = [] } = useCategories();
+  const { data: allPages = [] } = usePages();
   const category = categories.find((c) => c.slug === page.categorySlug);
   const parentPage = page.parentId ? allPages.find((p) => p.id === page.parentId) : null;
   const childPages = allPages.filter((p) => p.parentId === page.id);

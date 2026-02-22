@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Search, CheckCircle, Trash2, AlertTriangle, Plus, X, Sparkles } from "lucide-react";
-import { loadPages, savePages, AeoPage } from "@/lib/aeo-types";
+import { AeoPage } from "@/lib/aeo-types";
+import { usePages, useUpdatePage } from "@/hooks/use-aeo-data";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -43,13 +44,14 @@ function saveAcceptedDuplicates(accepted: string[]) {
   localStorage.setItem(ACCEPTED_KEY, JSON.stringify(accepted));
 }
 
-// Normalize a question string into a stable key for comparison
 function normalizeQuestion(q: string): string {
   return q.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
 const CannibalizationScanner = () => {
   const { toast } = useToast();
+  const { data: pages = [] } = usePages();
+  const updatePageMutation = useUpdatePage();
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<ScanResult | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
@@ -57,7 +59,6 @@ const CannibalizationScanner = () => {
   const [acceptedInSession, setAcceptedInSession] = useState<Set<number>>(new Set());
 
   const handleScan = async () => {
-    const pages = loadPages();
     if (pages.length < 2) {
       toast({ title: "Need at least 2 pages to scan", variant: "destructive" });
       return;
@@ -76,7 +77,6 @@ const CannibalizationScanner = () => {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      // Filter out previously accepted duplicates
       const acceptedList = loadAcceptedDuplicates();
       const filtered = {
         ...data,
@@ -138,67 +138,70 @@ const CannibalizationScanner = () => {
     const key = `${pageId}-${questionId}`;
     setRemoving(key);
 
-    const pages = loadPages();
-    const pageIndex = pages.findIndex((p) => p.id === pageId);
-    if (pageIndex === -1) {
+    const page = pages.find((p) => p.id === pageId);
+    if (!page) {
       toast({ title: "Page not found", variant: "destructive" });
       setRemoving(null);
       return;
     }
 
-    pages[pageIndex].accordionQA = pages[pageIndex].accordionQA.filter(
-      (qa) => qa.id !== questionId
-    );
-    savePages(pages);
+    const updatedPage: AeoPage = {
+      ...page,
+      accordionQA: page.accordionQA.filter((qa) => qa.id !== questionId),
+    };
 
-    // Update the result
-    if (result) {
-      const updated = { ...result };
-      const group = updated.duplicates[groupIndex];
-      if (group) {
-        group.instances = group.instances.filter(
-          (inst) => !(inst.pageId === pageId && inst.questionId === questionId)
-        );
-        if (group.instances.length <= 1) {
-          updated.duplicates.splice(groupIndex, 1);
+    try {
+      await updatePageMutation.mutateAsync(updatedPage);
+
+      if (result) {
+        const updated = { ...result };
+        const group = updated.duplicates[groupIndex];
+        if (group) {
+          group.instances = group.instances.filter(
+            (inst) => !(inst.pageId === pageId && inst.questionId === questionId)
+          );
+          if (group.instances.length <= 1) {
+            updated.duplicates.splice(groupIndex, 1);
+          }
         }
+        setResult(updated);
       }
-      setResult(updated);
-    }
 
-    toast({ title: "Question removed from page" });
-    setRemoving(null);
-
-    // Fetch suggestion for the page we just removed from
-    const updatedPages = loadPages();
-    const updatedPage = updatedPages.find((p) => p.id === pageId);
-    if (updatedPage) {
+      toast({ title: "Question removed from page" });
       fetchSuggestion(updatedPage, removedQuestionText);
+    } catch (e: any) {
+      toast({ title: "Failed to remove question", description: e.message, variant: "destructive" });
+    } finally {
+      setRemoving(null);
     }
   };
 
-  const handleInsertSuggestion = (pageId: string) => {
+  const handleInsertSuggestion = async (pageId: string) => {
     const suggestion = suggestions[pageId];
     if (!suggestion || !suggestion.question) return;
 
-    const pages = loadPages();
-    const pageIndex = pages.findIndex((p) => p.id === pageId);
-    if (pageIndex === -1) return;
+    const page = pages.find((p) => p.id === pageId);
+    if (!page) return;
 
-    pages[pageIndex].accordionQA.push({
-      id: crypto.randomUUID(),
-      question: suggestion.question,
-      answer: suggestion.answer,
-    });
-    savePages(pages);
+    const updatedPage: AeoPage = {
+      ...page,
+      accordionQA: [
+        ...page.accordionQA,
+        { id: crypto.randomUUID(), question: suggestion.question, answer: suggestion.answer },
+      ],
+    };
 
-    setSuggestions((prev) => {
-      const next = { ...prev };
-      delete next[pageId];
-      return next;
-    });
-
-    toast({ title: "Question added to page" });
+    try {
+      await updatePageMutation.mutateAsync(updatedPage);
+      setSuggestions((prev) => {
+        const next = { ...prev };
+        delete next[pageId];
+        return next;
+      });
+      toast({ title: "Question added to page" });
+    } catch (e: any) {
+      toast({ title: "Failed to add question", description: e.message, variant: "destructive" });
+    }
   };
 
   const handleDismissSuggestion = (pageId: string) => {
@@ -226,15 +229,15 @@ const CannibalizationScanner = () => {
               {scanning ? "Scanning..." : "Scan for Duplicates"}
             </Button>
             <span className="text-sm text-muted-foreground">
-              {loadPages().length} pages will be analyzed
+              {pages.length} pages will be analyzed
             </span>
           </div>
         </CardContent>
       </Card>
 
-      {/* Suggestion cards (shown after removal) */}
+      {/* Suggestion cards */}
       {Object.entries(suggestions).map(([pageId, suggestion]) => {
-        const page = loadPages().find((p) => p.id === pageId);
+        const page = pages.find((p) => p.id === pageId);
         return (
           <Card key={pageId} className="border-2 border-dashed border-accent">
             <CardHeader className="pb-2">
@@ -262,23 +265,11 @@ const CannibalizationScanner = () => {
                     <p className="text-sm">{suggestion.answer}</p>
                   </div>
                   <div className="flex items-center gap-2 pt-1">
-                    <Button
-                      variant="gold"
-                      size="sm"
-                      className="gap-1.5"
-                      onClick={() => handleInsertSuggestion(pageId)}
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      Insert
+                    <Button variant="gold" size="sm" className="gap-1.5" onClick={() => handleInsertSuggestion(pageId)}>
+                      <Plus className="h-3.5 w-3.5" /> Insert
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1.5"
-                      onClick={() => handleDismissSuggestion(pageId)}
-                    >
-                      <X className="h-3.5 w-3.5" />
-                      Pass
+                    <Button variant="outline" size="sm" className="gap-1.5" onClick={() => handleDismissSuggestion(pageId)}>
+                      <X className="h-3.5 w-3.5" /> Pass
                     </Button>
                   </div>
                 </div>
@@ -290,7 +281,6 @@ const CannibalizationScanner = () => {
 
       {result && (
         <>
-          {/* Summary */}
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-start gap-3">
@@ -311,7 +301,6 @@ const CannibalizationScanner = () => {
             </CardContent>
           </Card>
 
-          {/* Duplicate groups */}
           {result.duplicates.map((group, gi) => {
             if (acceptedInSession.has(gi)) {
               return (
@@ -340,7 +329,6 @@ const CannibalizationScanner = () => {
                     size="sm"
                     className="shrink-0 gap-1.5"
                     onClick={() => {
-                      // Persist to localStorage so it never shows again
                       const current = loadAcceptedDuplicates();
                       current.push(normalizeQuestion(group.question));
                       saveAcceptedDuplicates(current);
