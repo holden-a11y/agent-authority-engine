@@ -4,10 +4,11 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Settings, FileText, SearchCheck, Database } from "lucide-react";
+import { Settings, FileText, SearchCheck, Database, Map } from "lucide-react";
 import PageGenerator from "@/components/admin/PageGenerator";
 import CannibalizationScanner from "@/components/admin/CannibalizationScanner";
 import BackupManager from "@/components/admin/BackupManager";
+import BlueprintPlanner from "@/components/admin/BlueprintPlanner";
 
 interface EntityConfig {
   agentName: string;
@@ -40,6 +41,7 @@ const defaultConfig: EntityConfig = {
 };
 
 const Admin = () => {
+  const [activeTab, setActiveTab] = useState("entity");
   const [config, setConfig] = useState<EntityConfig>(() => {
     const stored = localStorage.getItem("aeo-entity-config");
     return stored ? { ...defaultConfig, ...JSON.parse(stored) } : defaultConfig;
@@ -72,9 +74,10 @@ const Admin = () => {
       </header>
 
       <div className="max-w-5xl mx-auto px-4 lg:px-8 py-8">
-        <Tabs defaultValue="entity" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="bg-card border border-border">
             <TabsTrigger value="entity" className="gap-1.5"><Settings className="h-3.5 w-3.5" /> Agent Config</TabsTrigger>
+            <TabsTrigger value="blueprint" className="gap-1.5"><Map className="h-3.5 w-3.5" /> Blueprint</TabsTrigger>
             <TabsTrigger value="pages" className="gap-1.5"><FileText className="h-3.5 w-3.5" /> Page Generator</TabsTrigger>
             <TabsTrigger value="cannibalization" className="gap-1.5"><SearchCheck className="h-3.5 w-3.5" /> Cannibalization</TabsTrigger>
             <TabsTrigger value="backups" className="gap-1.5"><Database className="h-3.5 w-3.5" /> Backups</TabsTrigger>
@@ -143,6 +146,11 @@ const Admin = () => {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Blueprint */}
+          <TabsContent value="blueprint">
+            <BlueprintPlanner onSwitchToGenerator={() => setActiveTab("pages")} />
           </TabsContent>
 
           {/* Page Generator */}
