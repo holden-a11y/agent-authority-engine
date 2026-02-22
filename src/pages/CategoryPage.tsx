@@ -1,19 +1,31 @@
 import { useParams, Link } from "react-router-dom";
 import { Layout } from "@/components/Layout";
-import { loadPages, loadCategories } from "@/lib/aeo-types";
+import { usePages, useCategories } from "@/hooks/use-aeo-data";
 import { LeadCaptureForm } from "@/components/LeadCaptureForm";
 import { FAIR_HOUSING_DISCLAIMER } from "@/lib/fair-housing";
 import { getCoverImage } from "@/lib/cover-images";
+import { Loader2 } from "lucide-react";
 import NotFound from "./NotFound";
 
 const CategoryPage = () => {
   const { category } = useParams<{ category: string }>();
-  const categories = loadCategories();
-  const cat = categories.find((c) => c.slug === category);
+  const { data: categories, isLoading: catLoading } = useCategories();
+  const { data: allPages, isLoading: pagesLoading } = usePages();
 
+  if (catLoading || pagesLoading) {
+    return (
+      <Layout>
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      </Layout>
+    );
+  }
+
+  const cat = categories?.find((c) => c.slug === category);
   if (!cat) return <NotFound />;
 
-  const pages = loadPages().filter((p) => p.categorySlug === category && !p.parentId);
+  const pages = (allPages || []).filter((p) => p.categorySlug === category && !p.parentId);
   const config = JSON.parse(localStorage.getItem("aeo-entity-config") || "{}");
   const agentName = config.agentName || "Agent";
   const market = config.market || "";

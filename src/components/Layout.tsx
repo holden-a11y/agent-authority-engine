@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, X, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { loadCategories } from "@/lib/aeo-types";
+import { useCategories } from "@/hooks/use-aeo-data";
 
 const staticLinks = [
   { label: "Home", to: "/" },
@@ -13,7 +13,7 @@ const staticLinks = [
 export function Header() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
-  const categories = loadCategories();
+  const { data: categories = [] } = useCategories();
 
   // Build nav: Home, category pages, About, Contact
   const navLinks = [
@@ -83,7 +83,7 @@ export function Header() {
 }
 
 export function Footer() {
-  const categories = loadCategories();
+  const { data: categories = [] } = useCategories();
   const footerLinks = [
     { label: "Home", to: "/" },
     ...categories.map((c) => ({ label: c.label, to: `/${c.slug}` })),

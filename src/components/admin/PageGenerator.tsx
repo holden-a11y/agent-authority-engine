@@ -10,8 +10,9 @@ import {
 } from "lucide-react";
 import {
   AeoPage, AeoQuestion, NavCategory,
-  generateSlug, loadPages, savePages, loadCategories, saveCategories, DEFAULT_CATEGORIES
+  generateSlug, DEFAULT_CATEGORIES
 } from "@/lib/aeo-types";
+import { usePages, useCategories, useSavePage, useDeletePage, useSaveCategory } from "@/hooks/use-aeo-data";
 import { useToast } from "@/hooks/use-toast";
 import { scanForFairHousingViolations, FairHousingFlag } from "@/lib/fair-housing";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,8 +32,12 @@ const PageGenerator = ({ agentName, market, socialUrls, entityConfig }: PageGene
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const [pages, setPages] = useState<AeoPage[]>(loadPages);
-  const [categories, setCategories] = useState<NavCategory[]>(loadCategories);
+  const { data: pages = [], isLoading: pagesLoading } = usePages();
+  const { data: categories = [], isLoading: catsLoading } = useCategories();
+  const savePageMutation = useSavePage();
+  const deletePageMutation = useDeletePage();
+  const saveCategoryMutation = useSaveCategory();
+
   const [step, setStep] = useState<Step>("input");
   const [question, setQuestion] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -50,7 +55,6 @@ const PageGenerator = ({ agentName, market, socialUrls, entityConfig }: PageGene
     }
     setIsGenerating(true);
     try {
-      // Collect all existing questions across all pages to avoid duplicates
       const allExistingQuestions = pages.flatMap((p) =>
         p.accordionQA.map((qa) => qa.question)
       );
@@ -111,7 +115,7 @@ const PageGenerator = ({ agentName, market, socialUrls, entityConfig }: PageGene
   };
 
   // ── Add custom category ──
-  const handleAddCategory = () => {
+  const handleAddCategory = async () => {
     if (!newCategoryLabel.trim()) return;
     const slug = generateSlug(newCategoryLabel);
     if (categories.some((c) => c.slug === slug)) {
@@ -124,17 +128,19 @@ const PageGenerator = ({ agentName, market, socialUrls, entityConfig }: PageGene
       color: "bg-indigo-100 text-indigo-800",
       isDefault: false,
     };
-    const updated = [...categories, newCat];
-    setCategories(updated);
-    saveCategories(updated);
-    setSelectedCategory(slug);
-    setNewCategoryLabel("");
-    setShowAddCategory(false);
-    toast({ title: `Added "${newCat.label}" category` });
+    try {
+      await saveCategoryMutation.mutateAsync(newCat);
+      setSelectedCategory(slug);
+      setNewCategoryLabel("");
+      setShowAddCategory(false);
+      toast({ title: `Added "${newCat.label}" category` });
+    } catch (e: any) {
+      toast({ title: "Failed to add category", description: e.message, variant: "destructive" });
+    }
   };
 
   // ── Save page ──
-  const handleSavePage = () => {
+  const handleSavePage = async () => {
     if (!draftPage || !selectedCategory) {
       toast({ title: "Pick a category first", variant: "destructive" });
       return;
@@ -145,21 +151,25 @@ const PageGenerator = ({ agentName, market, socialUrls, entityConfig }: PageGene
       parentId: selectedParentId || undefined,
       status: "published",
     };
-    const updated = [...pages, finalPage];
-    setPages(updated);
-    savePages(updated);
-    setStep("done");
-    toast({ title: "Page created!", description: `/${selectedCategory}/${finalPage.slug}` });
-    regenerateSitemap();
+    try {
+      await savePageMutation.mutateAsync(finalPage);
+      setStep("done");
+      toast({ title: "Page created!", description: `/${selectedCategory}/${finalPage.slug}` });
+      regenerateSitemap();
+    } catch (e: any) {
+      toast({ title: "Failed to save page", description: e.message, variant: "destructive" });
+    }
   };
 
   // ── Delete existing page ──
-  const deletePage = (id: string) => {
-    const updated = pages.filter((p) => p.id !== id);
-    setPages(updated);
-    savePages(updated);
-    toast({ title: "Page deleted" });
-    regenerateSitemap();
+  const deletePage = async (id: string) => {
+    try {
+      await deletePageMutation.mutateAsync(id);
+      toast({ title: "Page deleted" });
+      regenerateSitemap();
+    } catch (e: any) {
+      toast({ title: "Failed to delete page", description: e.message, variant: "destructive" });
+    }
   };
 
   // ── Reset ──
@@ -371,8 +381,8 @@ const PageGenerator = ({ agentName, market, socialUrls, entityConfig }: PageGene
               })()}
 
               <div className="flex gap-3 pt-4">
-                <Button variant="gold" onClick={handleSavePage} disabled={!selectedCategory} className="gap-1.5">
-                  <Check className="h-4 w-4" /> Add Page
+                <Button variant="gold" onClick={handleSavePage} disabled={!selectedCategory || savePageMutation.isPending} className="gap-1.5">
+                  {savePageMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Add Page
                 </Button>
                 <Button variant="outline" onClick={reset}>Cancel</Button>
               </div>

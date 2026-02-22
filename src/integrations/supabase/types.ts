@@ -14,6 +14,86 @@ export type Database = {
   }
   public: {
     Tables: {
+      aeo_categories: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          is_default: boolean
+          label: string
+          slug: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          label: string
+          slug: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          label?: string
+          slug?: string
+        }
+        Relationships: []
+      }
+      aeo_pages: {
+        Row: {
+          accordion_qa: Json
+          category_slug: string
+          created_at: string
+          h1: string
+          id: string
+          meta_description: string
+          parent_id: string | null
+          slug: string
+          status: string
+          title: string
+          youtube_transcript: string
+          youtube_video_id: string
+        }
+        Insert: {
+          accordion_qa?: Json
+          category_slug: string
+          created_at?: string
+          h1: string
+          id?: string
+          meta_description?: string
+          parent_id?: string | null
+          slug: string
+          status?: string
+          title: string
+          youtube_transcript?: string
+          youtube_video_id?: string
+        }
+        Update: {
+          accordion_qa?: Json
+          category_slug?: string
+          created_at?: string
+          h1?: string
+          id?: string
+          meta_description?: string
+          parent_id?: string | null
+          slug?: string
+          status?: string
+          title?: string
+          youtube_transcript?: string
+          youtube_video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aeo_pages_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "aeo_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       site_backups: {
         Row: {
           backup_data: Json
