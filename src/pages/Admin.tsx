@@ -9,54 +9,40 @@ import PageGenerator from "@/components/admin/PageGenerator";
 import CannibalizationScanner from "@/components/admin/CannibalizationScanner";
 import BackupManager from "@/components/admin/BackupManager";
 import BlueprintPlanner from "@/components/admin/BlueprintPlanner";
-
-interface EntityConfig {
-  agentName: string;
-  teamName: string;
-  market: string;
-  brokerage: string;
-  fubApiKey: string;
-  googleBusinessProfile: string;
-  facebookUrl: string;
-  instagramUrl: string;
-  linkedinUrl: string;
-  youtubeUrl: string;
-  xUrl: string;
-  tiktokUrl: string;
-}
-
-const defaultConfig: EntityConfig = {
-  agentName: "Holden Richardson",
-  teamName: "",
-  market: "Grand Rapids, Michigan",
-  brokerage: "",
-  fubApiKey: "",
-  googleBusinessProfile: "",
-  facebookUrl: "https://www.facebook.com/profile.php?id=61585877413251",
-  instagramUrl: "https://www.instagram.com/holdengr.re",
-  linkedinUrl: "https://www.linkedin.com/in/holdenrichardson",
-  youtubeUrl: "https://youtube.com/@holdengr.michigan",
-  xUrl: "https://x.com/realholdengr",
-  tiktokUrl: "https://www.tiktok.com/@realholdengr.re",
-};
+import { useSiteConfig, useSaveSiteConfig, SiteConfigMap } from "@/hooks/use-site-config";
+import { toast } from "@/hooks/use-toast";
 
 const Admin = () => {
   const [activeTab, setActiveTab] = useState("entity");
-  const [config, setConfig] = useState<EntityConfig>(() => {
-    const stored = localStorage.getItem("aeo-entity-config");
-    return stored ? { ...defaultConfig, ...JSON.parse(stored) } : defaultConfig;
-  });
+  const { data: config, isLoading } = useSiteConfig();
+  const saveMutation = useSaveSiteConfig();
+  const [localOverrides, setLocalOverrides] = useState<Partial<SiteConfigMap>>({});
   const [saved, setSaved] = useState(false);
 
-  const update = (key: keyof EntityConfig, value: string) => {
-    setConfig((prev) => ({ ...prev, [key]: value }));
+  const merged: SiteConfigMap = { ...(config || {} as SiteConfigMap), ...localOverrides };
+
+  const update = (key: keyof SiteConfigMap, value: string) => {
+    setLocalOverrides((prev) => ({ ...prev, [key]: value }));
     setSaved(false);
   };
 
   const handleSave = () => {
-    localStorage.setItem("aeo-entity-config", JSON.stringify(config));
-    setSaved(true);
+    saveMutation.mutate(localOverrides, {
+      onSuccess: () => {
+        setSaved(true);
+        setLocalOverrides({});
+        toast({ title: "Config saved!", description: "Your settings are now stored in the database." });
+      },
+    });
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-muted/30 flex items-center justify-center">
+        <p className="text-muted-foreground">Loading config…</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -91,57 +77,59 @@ const Admin = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium mb-1.5 block">Agent Name</label>
-                    <Input value={config.agentName} onChange={(e) => update("agentName", e.target.value)} className="h-9" />
+                    <Input value={merged.agentName} onChange={(e) => update("agentName", e.target.value)} className="h-9" />
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-1.5 block">Market / City</label>
-                    <Input value={config.market} onChange={(e) => update("market", e.target.value)} className="h-9" />
+                    <Input value={merged.market} onChange={(e) => update("market", e.target.value)} className="h-9" />
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-1.5 block">Brokerage</label>
-                    <Input value={config.brokerage} onChange={(e) => update("brokerage", e.target.value)} placeholder="e.g. Keller Williams" className="h-9" />
+                    <Input value={merged.brokerage} onChange={(e) => update("brokerage", e.target.value)} placeholder="e.g. Keller Williams" className="h-9" />
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-1.5 block">Team Name</label>
-                    <Input value={config.teamName} onChange={(e) => update("teamName", e.target.value)} placeholder="e.g. The Richardson Group" className="h-9" />
+                    <Input value={merged.teamName} onChange={(e) => update("teamName", e.target.value)} placeholder="e.g. The Richardson Group" className="h-9" />
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-1.5 block">Follow Up Boss API Key</label>
-                    <Input value={config.fubApiKey} onChange={(e) => update("fubApiKey", e.target.value)} placeholder="fka_..." type="password" className="h-9" />
+                    <Input value={merged.fubApiKey} onChange={(e) => update("fubApiKey", e.target.value)} placeholder="fka_..." type="password" className="h-9" />
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-1.5 block">Google Business Profile URL</label>
-                    <Input value={config.googleBusinessProfile} onChange={(e) => update("googleBusinessProfile", e.target.value)} placeholder="https://g.page/..." className="h-9" />
+                    <Input value={merged.googleBusinessProfile} onChange={(e) => update("googleBusinessProfile", e.target.value)} placeholder="https://g.page/..." className="h-9" />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                   <div>
                     <label className="text-sm font-medium mb-1.5 block">Facebook URL</label>
-                    <Input value={config.facebookUrl} onChange={(e) => update("facebookUrl", e.target.value)} placeholder="https://facebook.com/..." className="h-9" />
+                    <Input value={merged.facebookUrl} onChange={(e) => update("facebookUrl", e.target.value)} placeholder="https://facebook.com/..." className="h-9" />
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-1.5 block">Instagram URL</label>
-                    <Input value={config.instagramUrl} onChange={(e) => update("instagramUrl", e.target.value)} placeholder="https://instagram.com/..." className="h-9" />
+                    <Input value={merged.instagramUrl} onChange={(e) => update("instagramUrl", e.target.value)} placeholder="https://instagram.com/..." className="h-9" />
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-1.5 block">LinkedIn URL</label>
-                    <Input value={config.linkedinUrl} onChange={(e) => update("linkedinUrl", e.target.value)} placeholder="https://linkedin.com/in/..." className="h-9" />
+                    <Input value={merged.linkedinUrl} onChange={(e) => update("linkedinUrl", e.target.value)} placeholder="https://linkedin.com/in/..." className="h-9" />
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-1.5 block">YouTube URL</label>
-                    <Input value={config.youtubeUrl} onChange={(e) => update("youtubeUrl", e.target.value)} placeholder="https://youtube.com/@..." className="h-9" />
+                    <Input value={merged.youtubeUrl} onChange={(e) => update("youtubeUrl", e.target.value)} placeholder="https://youtube.com/@..." className="h-9" />
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-1.5 block">X (Twitter) URL</label>
-                    <Input value={config.xUrl} onChange={(e) => update("xUrl", e.target.value)} placeholder="https://x.com/..." className="h-9" />
+                    <Input value={merged.xUrl} onChange={(e) => update("xUrl", e.target.value)} placeholder="https://x.com/..." className="h-9" />
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-1.5 block">TikTok URL</label>
-                    <Input value={config.tiktokUrl} onChange={(e) => update("tiktokUrl", e.target.value)} placeholder="https://tiktok.com/@..." className="h-9" />
+                    <Input value={merged.tiktokUrl} onChange={(e) => update("tiktokUrl", e.target.value)} placeholder="https://tiktok.com/@..." className="h-9" />
                   </div>
                 </div>
                 <div className="flex items-center gap-3 pt-4">
-                  <Button variant="gold" onClick={handleSave}>Save Config</Button>
+                  <Button variant="gold" onClick={handleSave} disabled={saveMutation.isPending}>
+                    {saveMutation.isPending ? "Saving…" : "Save Config"}
+                  </Button>
                   {saved && <span className="text-sm text-green-600 font-medium">✓ Saved</span>}
                 </div>
               </CardContent>
@@ -156,18 +144,18 @@ const Admin = () => {
           {/* Page Generator */}
           <TabsContent value="pages">
             <PageGenerator
-              agentName={config.agentName}
-              market={config.market}
+              agentName={merged.agentName}
+              market={merged.market}
               socialUrls={[
-                config.googleBusinessProfile,
-                config.facebookUrl,
-                config.instagramUrl,
-                config.linkedinUrl,
-                config.youtubeUrl,
-                config.xUrl,
-                config.tiktokUrl,
+                merged.googleBusinessProfile,
+                merged.facebookUrl,
+                merged.instagramUrl,
+                merged.linkedinUrl,
+                merged.youtubeUrl,
+                merged.xUrl,
+                merged.tiktokUrl,
               ].filter(Boolean)}
-              entityConfig={config}
+              entityConfig={merged}
             />
           </TabsContent>
 
