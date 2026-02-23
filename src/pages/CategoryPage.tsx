@@ -1,6 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import { usePages, useCategories } from "@/hooks/use-aeo-data";
+import { useSiteConfig } from "@/hooks/use-site-config";
 import { LeadCaptureForm } from "@/components/LeadCaptureForm";
 import { FAIR_HOUSING_DISCLAIMER } from "@/lib/fair-housing";
 import { getCoverImage } from "@/lib/cover-images";
@@ -11,8 +12,9 @@ const CategoryPage = () => {
   const { category } = useParams<{ category: string }>();
   const { data: categories, isLoading: catLoading } = useCategories();
   const { data: allPages, isLoading: pagesLoading } = usePages();
+  const { data: siteConfig, isLoading: configLoading } = useSiteConfig();
 
-  if (catLoading || pagesLoading) {
+  if (catLoading || pagesLoading || configLoading) {
     return (
       <Layout>
         <div className="min-h-[60vh] flex items-center justify-center">
@@ -26,9 +28,8 @@ const CategoryPage = () => {
   if (!cat) return <NotFound />;
 
   const pages = (allPages || []).filter((p) => p.categorySlug === category && !p.parentId);
-  const config = JSON.parse(localStorage.getItem("aeo-entity-config") || "{}");
-  const agentName = config.agentName || "Agent";
-  const market = config.market || "";
+  const agentName = siteConfig?.agentName || "Agent";
+  const market = siteConfig?.market || "";
   const coverImage = getCoverImage(category || "default");
 
   return (
