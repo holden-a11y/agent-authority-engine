@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Download, Upload, Trash2, RefreshCw, Clock } from "lucide-react";
+import { Download, Upload, RefreshCw, Clock, Loader2 } from "lucide-react";
 
 interface Backup {
   id: string;
@@ -17,6 +17,7 @@ const BackupManager = () => {
   const [backups, setBackups] = useState<Backup[]>([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [restoring, setRestoring] = useState<string | null>(null);
 
   const fetchBackups = async () => {
     setLoading(true);
@@ -38,22 +39,29 @@ const BackupManager = () => {
   const createBackup = async () => {
     setCreating(true);
     try {
-      // Gather all localStorage data relevant to the site
-      const backupData: Record<string, unknown> = {};
-      const keys = ["aeo-pages", "aeo-categories", "aeo-entity-config", "aeo-site-content"];
-      for (const key of keys) {
-        const val = localStorage.getItem(key);
-        if (val) {
-          try { backupData[key] = JSON.parse(val); } catch { backupData[key] = val; }
-        }
-      }
+      // Snapshot all three DB tables
+      const [pagesRes, categoriesRes, configRes] = await Promise.all([
+        supabase.from("aeo_pages").select("*"),
+        supabase.from("aeo_categories").select("*"),
+        supabase.from("site_config").select("*"),
+      ]);
+
+      if (pagesRes.error) throw pagesRes.error;
+      if (categoriesRes.error) throw categoriesRes.error;
+      if (configRes.error) throw configRes.error;
+
+      const backupData = {
+        aeo_pages: pagesRes.data,
+        aeo_categories: categoriesRes.data,
+        site_config: configRes.data,
+      };
 
       const { error } = await supabase.functions.invoke("create-backup", {
         body: { data: backupData, type: "manual" },
       });
 
       if (error) throw error;
-      toast({ title: "Backup created!", description: "A snapshot of your site data has been saved." });
+      toast({ title: "Backup created!", description: "A snapshot of your database has been saved." });
       fetchBackups();
     } catch (err: any) {
       toast({ title: "Backup failed", description: err.message, variant: "destructive" });
@@ -62,15 +70,46 @@ const BackupManager = () => {
     }
   };
 
-  const restoreBackup = (backup: Backup) => {
-    const data = backup.backup_data as Record<string, unknown>;
-    for (const [key, value] of Object.entries(data)) {
-      localStorage.setItem(key, typeof value === "string" ? value : JSON.stringify(value));
+  const restoreBackup = async (backup: Backup) => {
+    setRestoring(backup.id);
+    try {
+      const data = backup.backup_data as Record<string, any>;
+
+      // Restore site_config via upsert
+      if (Array.isArray(data.site_config) && data.site_config.length > 0) {
+        const { error } = await supabase
+          .from("site_config")
+          .upsert(data.site_config, { onConflict: "key" });
+        if (error) throw error;
+      }
+
+      // Restore aeo_categories: delete all then re-insert
+      if (Array.isArray(data.aeo_categories)) {
+        await supabase.from("aeo_categories").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+        if (data.aeo_categories.length > 0) {
+          const { error } = await supabase.from("aeo_categories").insert(data.aeo_categories);
+          if (error) throw error;
+        }
+      }
+
+      // Restore aeo_pages: delete all then re-insert
+      if (Array.isArray(data.aeo_pages)) {
+        await supabase.from("aeo_pages").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+        if (data.aeo_pages.length > 0) {
+          const { error } = await supabase.from("aeo_pages").insert(data.aeo_pages);
+          if (error) throw error;
+        }
+      }
+
+      toast({
+        title: "Backup restored!",
+        description: `Data from ${new Date(backup.created_at).toLocaleString()} has been restored. Reload the page to see changes.`,
+      });
+    } catch (err: any) {
+      toast({ title: "Restore failed", description: err.message, variant: "destructive" });
+    } finally {
+      setRestoring(null);
     }
-    toast({
-      title: "Backup restored!",
-      description: `Data from ${new Date(backup.created_at).toLocaleString()} has been restored. Reload the site to see changes.`,
-    });
   };
 
   return (
@@ -100,8 +139,11 @@ const BackupManager = () => {
         ) : (
           <div className="space-y-2">
             {backups.map((backup) => {
-              const pageCount = Array.isArray((backup.backup_data as any)?.["aeo-pages"])
-                ? ((backup.backup_data as any)["aeo-pages"] as unknown[]).length
+              const pageCount = Array.isArray((backup.backup_data as any)?.aeo_pages)
+                ? ((backup.backup_data as any).aeo_pages as unknown[]).length
+                : 0;
+              const catCount = Array.isArray((backup.backup_data as any)?.aeo_categories)
+                ? ((backup.backup_data as any).aeo_categories as unknown[]).length
                 : 0;
               return (
                 <div
@@ -117,15 +159,16 @@ const BackupManager = () => {
                         })}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {pageCount} pages · {Object.keys(backup.backup_data).length} data keys
+                        {pageCount} pages · {catCount} categories · {Object.keys(backup.backup_data).length} tables
                       </p>
                     </div>
                     <Badge variant={backup.backup_type === "auto" ? "secondary" : "outline"} className="text-xs">
                       {backup.backup_type}
                     </Badge>
                   </div>
-                  <Button variant="outline" size="sm" onClick={() => restoreBackup(backup)}>
-                    <Upload className="h-3.5 w-3.5 mr-1.5" /> Restore
+                  <Button variant="outline" size="sm" onClick={() => restoreBackup(backup)} disabled={restoring === backup.id}>
+                    {restoring === backup.id ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Upload className="h-3.5 w-3.5 mr-1.5" />}
+                    {restoring === backup.id ? "Restoring..." : "Restore"}
                   </Button>
                 </div>
               );
