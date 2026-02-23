@@ -9,6 +9,7 @@ import PageGenerator from "@/components/admin/PageGenerator";
 import CannibalizationScanner from "@/components/admin/CannibalizationScanner";
 import BackupManager from "@/components/admin/BackupManager";
 import BlueprintPlanner from "@/components/admin/BlueprintPlanner";
+import SiteHealthBar from "@/components/admin/SiteHealthBar";
 import { useSiteConfig, useSaveSiteConfig, SiteConfigMap } from "@/hooks/use-site-config";
 import { toast } from "@/hooks/use-toast";
 
@@ -59,7 +60,8 @@ const Admin = () => {
         </div>
       </header>
 
-      <div className="max-w-5xl mx-auto px-4 lg:px-8 py-8">
+      <div className="max-w-5xl mx-auto px-4 lg:px-8 py-8 space-y-6">
+        <SiteHealthBar />
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="bg-card border border-border">
             <TabsTrigger value="entity" className="gap-1.5"><Settings className="h-3.5 w-3.5" /> Agent Config</TabsTrigger>
