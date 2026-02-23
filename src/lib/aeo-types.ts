@@ -63,39 +63,6 @@ export function generateSlug(title: string): string {
     .replace(/-+/g, "-");
 }
 
-export function loadCategories(): NavCategory[] {
-  try {
-    const stored = localStorage.getItem("aeo-categories");
-    if (stored) return JSON.parse(stored);
-  } catch {}
-  return [...DEFAULT_CATEGORIES];
-}
-
-export function saveCategories(cats: NavCategory[]) {
-  localStorage.setItem("aeo-categories", JSON.stringify(cats));
-}
-
-export function loadPages(): AeoPage[] {
-  try {
-    const pages: AeoPage[] = JSON.parse(localStorage.getItem("aeo-pages") || "[]");
-    // Auto-fix any slugs that are too long
-    let changed = false;
-    for (const p of pages) {
-      const short = generateSlug(p.title);
-      if (short !== p.slug) {
-        p.slug = short;
-        changed = true;
-      }
-    }
-    if (changed) localStorage.setItem("aeo-pages", JSON.stringify(pages));
-    return pages;
-  }
-  catch { return []; }
-}
-
-export function savePages(pages: AeoPage[]) {
-  localStorage.setItem("aeo-pages", JSON.stringify(pages));
-}
 
 export function generateJsonLd(page: AeoPage, agentName: string, market: string, socialUrls: string[]): { faqSchema: object; localBusiness: object } {
   const faqSchema = {
